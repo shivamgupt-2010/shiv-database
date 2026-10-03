@@ -15,8 +15,8 @@ async def register(
     project: Optional[Project] = Depends(get_optional_project_by_api_key),
     auth_service: AuthService = Depends(get_auth_service)
 ):
-    user = await auth_service.register(body.email, body.password, body.metadata, project)
-    return SuccessResponse(data={"id": user.id, "email": user.email}, message="User registered successfully")
+    user = await auth_service.register(body.email, body.username, body.password, body.metadata, project)
+    return SuccessResponse(data={"id": user.id, "email": user.email, "username": user.username}, message="User registered successfully")
 
 
 @router.post("/login", response_model=SuccessResponse[TokenResponse])
@@ -30,7 +30,7 @@ async def login(
     ua = request.headers.get("user-agent")
     
     access_token, refresh_token, user = await auth_service.login(
-        body.email, body.password, project, ip, ua
+        body.email_or_username, body.password, project, ip, ua
     )
     
     return SuccessResponse(

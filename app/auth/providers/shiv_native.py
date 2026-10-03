@@ -14,6 +14,7 @@ class ShivNativeAuthProvider(AuthProvider):
 
     async def register_user(self, user_data: Dict[str, Any]) -> User:
         email = user_data.get("email")
+        username = user_data.get("username")
         password = user_data.get("password")
         metadata = user_data.get("metadata", {})
         
@@ -30,6 +31,7 @@ class ShivNativeAuthProvider(AuthProvider):
         hashed_password = get_password_hash(password)
         new_user = User(
             email=email,
+            username=username,
             password_hash=hashed_password,
             metadata_=metadata,
             role="super_admin" if is_first_user else "user"
@@ -40,10 +42,16 @@ class ShivNativeAuthProvider(AuthProvider):
         return new_user
 
     async def authenticate_user(self, credentials: Dict[str, Any]) -> User:
-        email = credentials.get("email")
+        email_or_username = credentials.get("email_or_username")
         password = credentials.get("password")
         
-        user = await self.get_user_by_email(email)
+        user = await self.get_user_by_email(email_or_username)
+        if not user:
+            # Fallback to check username
+            stmt = select(User).where(User.username == email_or_username)
+            result = await self.db.execute(stmt)
+            user = result.scalar_one_or_none()
+            
         if not user or not user.password_hash:
             raise AuthenticationError("Invalid email or password")
             

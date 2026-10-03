@@ -7,15 +7,15 @@ PROJECT_ID = "shivl"
 async def setup():
     async with httpx.AsyncClient(base_url=API_URL) as client:
         print("1. Registering admin user...")
-        # Since this is the first user registered, the backend will make it super_admin
         reg_res = await client.post("/auth/register", json={
-            "email": "admin@shiv.local",
+            "email": "admin@example.com",
+            "username": "admin",
             "password": "supersecurepassword123",
             "metadata": {"name": "Admin"}
         })
         
         if reg_res.status_code == 200:
-            print("Successfully registered admin@shiv.local!")
+            print("Successfully registered admin@example.com!")
         elif reg_res.status_code == 400 and "exists" in reg_res.text:
             print("User already exists, proceeding to login...")
         else:
@@ -23,7 +23,7 @@ async def setup():
 
         print("\n2. Logging in to get Bearer Token...")
         login_res = await client.post("/auth/login", json={
-            "email": "admin@shiv.local",
+            "email_or_username": "admin@example.com",
             "password": "supersecurepassword123"
         })
         

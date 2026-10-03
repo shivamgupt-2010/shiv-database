@@ -16,23 +16,24 @@ class AuthService:
         # so users can traverse apps seamlessly. We use Native provider to keep it free and unlimited.
         self.provider = ShivNativeAuthProvider(db)
 
-    async def register(self, email: str, password: str, metadata: Optional[Dict[str, Any]] = None, project: Optional[Project] = None) -> User:
+    async def register(self, email: str, username: str, password: str, metadata: Optional[Dict[str, Any]] = None, project: Optional[Project] = None) -> User:
         # Project parameter is ignored because auth is global across all projects
         return await self.provider.register_user({
-            "email": email, 
+            "email": email,
+            "username": username,
             "password": password, 
             "metadata": metadata or {}
         })
 
     async def login(
         self, 
-        email: str, 
+        email_or_username: str, 
         password: str, 
         project: Optional[Project] = None,
         ip_address: str = None,
         user_agent: str = None
     ) -> Tuple[str, str, User]:
-        user = await self.provider.authenticate_user({"email": email, "password": password})
+        user = await self.provider.authenticate_user({"email_or_username": email_or_username, "password": password})
         
         access_token, _ = create_access_token({"sub": user.id, "email": user.email, "role": user.role})
         refresh_token, refresh_token_hash, expire = create_refresh_token()
