@@ -1,0 +1,60 @@
+{
+    "instances": {
+        "jeeprep_firebase": {
+            "type": "firebase",
+            "project_id": "jeeprep-a5262",
+            "api_key": "AIzaSyBFjjxE5fhAgX-bK_-BeFliUO2V0v_5SRQ",
+            "credentials_json": {},
+            "storage_bucket": "jeeprep-a5262.firebasestorage.app"
+        },
+        "shiv_firebase": {
+            "type": "firebase",
+            "project_id": "shiv-a53a5",
+            "api_key": "AIzaSyDQGZLqutifxo9siOp0A-TrASAz_p0v0IA",
+            "credentials_json": {},
+            "storage_bucket": "shiv-a53a5.firebasestorage.app"
+        },
+        "shiv1_firebase": {
+            "type": "firebase",
+            "project_id": "shiv1-57ae1",
+            "api_key": "AIzaSyBzZdigMiz0Kh8lFSiWti64d7BfkYxyH5k",
+            "credentials_json": {},
+            "storage_bucket": "shiv1-57ae1.firebasestorage.app"
+        },
+        "shiv2_firebase": {
+            "type": "firebase",
+            "project_id": "shiv2-58b03",
+            "api_key": "AIzaSyCSJk5j5T2fTez-wCgG61BzZSQu1scWDng",
+            "credentials_json": {},
+            "storage_bucket": "shiv2-58b03.firebasestorage.app"
+        },
+        "shiv3_firebase": {
+            "type": "firebase",
+            "project_id": "shiv3-b3c6a",
+            "api_key": "AIzaSyAiqc2St8gdIon15P9guLGO_m-DxRavuK4",
+            "credentials_json": {},
+            "storage_bucket": "shiv3-b3c6a.firebasestorage.app"
+        },
+        "supabase_analytics": {
+            "type": "supabase",
+            "url": "https://xyz.supabase.co",
+            "service_role_key": "mock-admin-key"
+        }
+    },
+    "pool": [
+        "jeeprep_firebase",
+        "shiv_firebase",
+        "shiv1_firebase",
+        "shiv2_firebase",
+        "shiv3_firebase",
+        "supabase_analytics"
+    ],
+    "storage_pool": [
+        "jeeprep_firebase",
+        "shiv_firebase",
+        "shiv1_firebase",
+        "shiv2_firebase",
+        "shiv3_firebase"
+    ],
+    "default": "shiv_native"
+}
