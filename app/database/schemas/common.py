@@ -19,6 +19,13 @@ class ApiResponse(BaseModel, Generic[T]):
     meta: MetaResponse
 
 
+class SuccessResponse(BaseModel, Generic[T]):
+    success: bool = True
+    data: Optional[T] = None
+    message: Optional[str] = None
+    meta: Optional[MetaResponse] = None
+
+
 class ErrorDetail(BaseModel):
     code: ErrorCode
     message: str

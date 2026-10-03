@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.database.database import get_db
+from app.database.session import get_db_session as get_db
 from app.database.schemas.common import SuccessResponse
 from app.database.models.auth import User
 from app.api.dependencies import get_current_active_admin

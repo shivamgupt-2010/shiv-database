@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
-from app.database.database import get_db
+from app.database.session import get_db_session as get_db
 from app.database.schemas.common import SuccessResponse
-from app.database.models.auth import APIKey, User
+from app.database.models.auth import User
+from app.database.models.project import APIKey
 from app.api.dependencies import get_current_active_admin
 from app.security.api_keys import generate_api_key
 
