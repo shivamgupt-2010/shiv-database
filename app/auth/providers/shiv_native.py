@@ -22,11 +22,17 @@ class ShivNativeAuthProvider(AuthProvider):
         if existing:
             raise AuthenticationError("User with this email already exists")
             
+        # If this is the very first user in the database, make them a super_admin
+        count_stmt = select(User).limit(1)
+        first_user_check = await self.db.execute(count_stmt)
+        is_first_user = first_user_check.scalar_one_or_none() is None
+
         hashed_password = get_password_hash(password)
         new_user = User(
             email=email,
             password_hash=hashed_password,
-            metadata_=metadata
+            metadata_=metadata,
+            role="super_admin" if is_first_user else "user"
         )
         self.db.add(new_user)
         await self.db.commit()
