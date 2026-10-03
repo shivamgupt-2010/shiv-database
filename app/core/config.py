@@ -54,3 +54,9 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Ensure we always use the asyncpg driver for PostgreSQL
+if settings.DATABASE_URL.startswith("postgres://"):
+    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif settings.DATABASE_URL.startswith("postgresql://"):
+    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
