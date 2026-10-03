@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
-from app.database.models.project import AuditLog
+from app.database.models.audit import AuditLog
 import json
 
 class AuditService:
