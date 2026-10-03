@@ -4,7 +4,7 @@ from app.database.schemas.common import SuccessResponse
 from app.database.models.project import Project
 from app.database.models.auth import User
 from app.auth.service import AuthService
-from app.api.dependencies import get_auth_service, get_project_by_api_key, get_current_user
+from app.api.dependencies import get_auth_service, get_optional_project_by_api_key, get_current_user
 from typing import Optional
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 @router.post("/register", response_model=SuccessResponse)
 async def register(
     body: UserRegisterRequest,
-    project: Optional[Project] = Depends(get_project_by_api_key),
+    project: Optional[Project] = Depends(get_optional_project_by_api_key),
     auth_service: AuthService = Depends(get_auth_service)
 ):
     user = await auth_service.register(body.email, body.password, body.metadata, project)
@@ -23,7 +23,7 @@ async def register(
 async def login(
     request: Request,
     body: UserLoginRequest,
-    project: Optional[Project] = Depends(get_project_by_api_key),
+    project: Optional[Project] = Depends(get_optional_project_by_api_key),
     auth_service: AuthService = Depends(get_auth_service)
 ):
     ip = request.client.host if request.client else None

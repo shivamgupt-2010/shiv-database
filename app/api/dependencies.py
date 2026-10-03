@@ -93,3 +93,15 @@ async def get_project_by_api_key(
         return project
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+async def get_optional_project_by_api_key(
+    x_api_key: Optional[str] = Header(None, description="Project API Key"),
+    db: AsyncSession = Depends(get_db)
+) -> Optional[Project]:
+    """Dependency for optional API key (e.g. for global Admin login)"""
+    if not x_api_key:
+        return None
+    try:
+        return await get_project_by_api_key(x_api_key, db)
+    except HTTPException:
+        return None
