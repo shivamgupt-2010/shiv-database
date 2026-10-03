@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional
 
-from app.database.database import get_db
+from app.database.session import get_db_session as get_db
 from app.auth.service import AuthService
 from app.database.service import DatabaseService
 from app.audit.service import AuditService

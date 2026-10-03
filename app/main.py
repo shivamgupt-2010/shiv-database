@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import settings
-from app.core.exceptions import AuthenticationError, AuthorizationError, ProviderError
+from app.core.exceptions import AuthenticationError, PermissionDeniedError, ProviderError
 from app.security.security import SecurityHeadersMiddleware, MaxBodySizeMiddleware
 from app.security.rate_limit import default_rate_limiter
 
@@ -49,8 +49,8 @@ def create_app() -> FastAPI:
         logger.warning(f"Authentication Error: {exc.message}")
         return JSONResponse(status_code=401, content={"detail": exc.message})
 
-    @app.exception_handler(AuthorizationError)
-    async def authz_exception_handler(request: Request, exc: AuthorizationError):
+    @app.exception_handler(PermissionDeniedError)
+    async def authz_exception_handler(request: Request, exc: PermissionDeniedError):
         logger.warning(f"Authorization Error: {exc.message}")
         return JSONResponse(status_code=403, content={"detail": exc.message})
 
