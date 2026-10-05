@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHIV DB & Auth Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Auth View -->
+        <div id="auth-view" class="view active">
+            <div class="glass-card auth-card">
+                <div class="logo">
+                    <h1>SHIV</h1>
+                    <p>Database & Auth</p>
+                </div>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">Username / Email</label>
+                        <input type="text" id="username" required placeholder="super_admin">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn primary-btn" id="login-btn">
+                        <span class="btn-text">Authenticate</span>
+                        <span class="loader hidden"></span>
+                    </button>
+                    <div id="login-error" class="error-msg hidden"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="view hidden">
+            <nav class="glass-nav">
+                <div class="nav-brand">
+                    <h2>SHIV Admin</h2>
+                </div>
+                <div class="nav-actions">
+                    <button id="logout-btn" class="btn ghost-btn">Logout</button>
+                </div>
+            </nav>
+
+            <main class="dashboard-content">
+                <header class="page-header">
+                    <h2>Platform Overview</h2>
+                    <p>Manage projects, configurations, and API keys.</p>
+                </header>
+
+                <div class="grid">
+                    <!-- Projects Section -->
+                    <section class="glass-card section-card">
+                        <div class="card-header">
+                            <h3>Projects</h3>
+                            <button class="btn secondary-btn" id="new-project-btn">+ New Project</button>
+                        </div>
+                        <div class="card-body">
+                            <ul id="projects-list" class="item-list">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                    </section>
+
+                    <!-- API Keys Section -->
+                    <section class="glass-card section-card">
+                        <div class="card-header">
+                            <h3>API Keys</h3>
+                            <p class="subtitle">Select a project to manage its keys</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="key-actions hidden" id="key-actions">
+                                <button class="btn primary-btn w-full" id="generate-key-btn">Generate New API Key</button>
+                            </div>
+                            <!-- Currently we don't have a GET /api-keys/ route in this backend to list keys securely, so we'll just allow generating. -->
+                            <!-- We can show generated keys temporarily here. -->
+                            <div id="generated-keys-container" class="mt-4"></div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+        
+        <!-- Modals -->
+        <!-- New Project Modal -->
+        <div class="modal-overlay hidden" id="new-project-modal">
+            <div class="glass-card modal">
+                <h3>Create Project</h3>
+                <form id="create-project-form">
+                    <div class="form-group">
+                        <label>Project Name</label>
+                        <input type="text" id="proj-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" id="proj-desc">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn ghost-btn" id="close-project-modal">Cancel</button>
+                        <button type="submit" class="btn primary-btn">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- New API Key Modal -->
+        <div class="modal-overlay hidden" id="new-key-modal">
+            <div class="glass-card modal">
+                <h3>Generate API Key</h3>
+                <form id="create-key-form">
+                    <div class="form-group">
+                        <label>Key Name (e.g. Prod Server)</label>
+                        <input type="text" id="key-name" required>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn ghost-btn" id="close-key-modal">Cancel</button>
+                        <button type="submit" class="btn primary-btn">Generate</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

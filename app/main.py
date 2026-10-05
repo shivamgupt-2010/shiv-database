@@ -9,7 +9,8 @@ from app.core.exceptions import AuthenticationError, PermissionDeniedError, Prov
 from app.security.security import SecurityHeadersMiddleware, MaxBodySizeMiddleware
 from app.security.rate_limit import default_rate_limiter
 
-from app.api.routes import health, auth, records, projects, api_keys, audit, admin, storage, realtime
+from app.api.routes import health, auth, records, projects, api_keys, audit, admin, storage, realtime, dashboard
+from fastapi.staticfiles import StaticFiles
 
 logger = logging.getLogger("shiv.main")
 
@@ -74,6 +75,10 @@ def create_app() -> FastAPI:
     app.include_router(admin.router)
     app.include_router(storage.router)
     app.include_router(realtime.router)
+    app.include_router(dashboard.router)
+
+    # Static files for dashboard
+    app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
     return app
 
