@@ -6,6 +6,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginBtn = document.getElementById('login-btn');
     const loginError = document.getElementById('login-error');
     const logoutBtn = document.getElementById('logout-btn');
+
+    const registerForm = document.getElementById('register-form');
+    const registerBtn = document.getElementById('register-btn');
+    const registerError = document.getElementById('register-error');
+
+    const showRegisterLink = document.getElementById('show-register-link');
+    const showLoginLink = document.getElementById('show-login-link');
     
     const projectsList = document.getElementById('projects-list');
     const newProjectBtn = document.getElementById('new-project-btn');
@@ -28,6 +35,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (token) {
         showDashboard();
     }
+
+    // --- Form Toggles ---
+    showRegisterLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+    });
+
+    showLoginLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        registerForm.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+    });
 
     // --- Auth ---
     loginForm.addEventListener('submit', async (e) => {
@@ -56,6 +76,42 @@ document.addEventListener('DOMContentLoaded', () => {
             loginError.classList.remove('hidden');
         } finally {
             loginBtn.classList.remove('loading');
+        }
+    });
+
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('reg-email').value;
+        const username = document.getElementById('reg-username').value;
+        const password = document.getElementById('reg-password').value;
+        
+        registerBtn.classList.add('loading');
+        registerError.classList.add('hidden');
+
+        try {
+            const res = await fetch('/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, username, password })
+            });
+            const data = await res.json();
+            
+            if (!res.ok) throw new Error(data.detail || 'Registration failed');
+            
+            // On success, show login form and pre-fill username
+            registerForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            document.getElementById('username').value = username;
+            
+            // Show a temporary success message in login error box for UI feedback
+            loginError.textContent = "Registration successful! Please login.";
+            loginError.style.color = "var(--success-color, #10b981)";
+            loginError.classList.remove('hidden');
+        } catch (err) {
+            registerError.textContent = err.message;
+            registerError.classList.remove('hidden');
+        } finally {
+            registerBtn.classList.remove('loading');
         }
     });
 
