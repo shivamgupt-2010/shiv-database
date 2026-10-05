@@ -32,8 +32,7 @@ class ShivNativeAuthProvider(AuthProvider):
         new_user = User(
             email=email,
             username=username,
-            password_hash=hashed_password,
-            metadata_=metadata,
+            hashed_password=hashed_password,
             role="super_admin" if is_first_user else "user"
         )
         self.db.add(new_user)
@@ -52,10 +51,10 @@ class ShivNativeAuthProvider(AuthProvider):
             result = await self.db.execute(stmt)
             user = result.scalar_one_or_none()
             
-        if not user or not user.password_hash:
+        if not user or not user.hashed_password:
             raise AuthenticationError("Invalid email or password")
             
-        if not verify_password(password, user.password_hash):
+        if not verify_password(password, user.hashed_password):
             raise AuthenticationError("Invalid email or password")
             
         if not user.is_active:
