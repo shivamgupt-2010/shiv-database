@@ -9,6 +9,7 @@ class UserRegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
     display_name: Optional[str] = None
     phone: Optional[str] = None
+    metadata: Optional[dict] = None
 
 
 class UserLoginRequest(BaseModel):
@@ -39,8 +40,8 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
-    expires_in: int
-    user: UserProfileResponse
+    expires_in: Optional[int] = 3600
+    user: Optional[UserProfileResponse] = None
 
 
 class RefreshTokenRequest(BaseModel):

@@ -53,8 +53,13 @@ class Session(Base):
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    refresh_token_hash: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True, nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="sessions")
+
+    @property
+    def is_revoked(self) -> bool:
+        return self.revoked
 
 
 class RefreshToken(Base):

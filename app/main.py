@@ -66,6 +66,12 @@ def create_app() -> FastAPI:
         detail = str(exc) if settings.DEBUG else "Internal server error"
         return JSONResponse(status_code=500, content={"detail": detail})
 
+    @app.exception_handler(Exception)
+    async def general_exception_handler(request: Request, exc: Exception):
+        logger.error(f"Unhandled Exception: {str(exc)}")
+        detail = str(exc) if settings.DEBUG else "Internal server error"
+        return JSONResponse(status_code=500, content={"detail": detail})
+
     # Routers
     app.include_router(health.router)
     app.include_router(auth.router)
@@ -90,6 +96,7 @@ async def startup_event():
     logger.info("Starting SHIV DB & Auth service...")
     from app.database.session import engine
     from app.database.models.base import Base
+    from sqlalchemy import text
     import app.database.models.auth
     import app.database.models.project
     import app.database.models.record
@@ -97,6 +104,10 @@ async def startup_event():
     import app.database.models.fabric
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        try:
+            await conn.execute(text("ALTER TABLE sessions ADD COLUMN refresh_token_hash VARCHAR(255)"))
+        except Exception:
+            pass
     logger.info("Database schema verified and initialized.")
 
 @app.on_event("shutdown")

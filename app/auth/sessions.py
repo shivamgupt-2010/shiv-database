@@ -18,7 +18,7 @@ async def create_session(
         refresh_token_hash=refresh_token_hash,
         expires_at=expires_at,
         ip_address=ip_address,
-        user_agent=user_agent
+        device_info=user_agent
     )
     db.add(session_record)
     await db.commit()
@@ -27,14 +27,14 @@ async def create_session(
 
 async def revoke_session(db: AsyncSession, session_id: str) -> bool:
     """Revoke a specific session."""
-    stmt = update(SessionModel).where(SessionModel.id == session_id).values(is_revoked=True)
+    stmt = update(SessionModel).where(SessionModel.id == session_id).values(revoked=True)
     result = await db.execute(stmt)
     await db.commit()
     return result.rowcount > 0
 
 async def revoke_all_user_sessions(db: AsyncSession, user_id: str) -> int:
     """Revoke all sessions for a user (e.g., on password reset or account compromise)."""
-    stmt = update(SessionModel).where(SessionModel.user_id == user_id).values(is_revoked=True)
+    stmt = update(SessionModel).where(SessionModel.user_id == user_id).values(revoked=True)
     result = await db.execute(stmt)
     await db.commit()
     return result.rowcount
