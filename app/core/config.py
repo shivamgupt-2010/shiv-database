@@ -55,8 +55,25 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Ensure we always use the asyncpg driver for PostgreSQL
-if settings.DATABASE_URL.startswith("postgres://"):
-    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
-elif settings.DATABASE_URL.startswith("postgresql://"):
-    settings.DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+
+def sanitize_database_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        
+    if "postgresql+asyncpg://" in url:
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        if "sslmode" in query:
+            ssl_val = query.pop("sslmode")[0]
+            if ssl_val in ("require", "prefer", "verify-ca", "verify-full"):
+                query["ssl"] = ["require"]
+            elif ssl_val == "disable":
+                query["ssl"] = ["disable"]
+        new_query = urlencode(query, doseq=True)
+        url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+    return url
+
+settings.DATABASE_URL = sanitize_database_url(settings.DATABASE_URL)
