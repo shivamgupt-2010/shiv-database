@@ -94,21 +94,24 @@ app = create_app()
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting SHIV DB & Auth service...")
-    from app.database.session import engine
-    from app.database.models.base import Base
-    from sqlalchemy import text
-    import app.database.models.auth
-    import app.database.models.project
-    import app.database.models.record
-    import app.database.models.audit
-    import app.database.models.fabric
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        try:
-            await conn.execute(text("ALTER TABLE sessions ADD COLUMN refresh_token_hash VARCHAR(255)"))
-        except Exception:
-            pass
-    logger.info("Database schema verified and initialized.")
+    try:
+        from app.database.session import engine
+        from app.database.models.base import Base
+        from sqlalchemy import text
+        import app.database.models.auth
+        import app.database.models.project
+        import app.database.models.record
+        import app.database.models.audit
+        import app.database.models.fabric
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            try:
+                await conn.execute(text("ALTER TABLE sessions ADD COLUMN refresh_token_hash VARCHAR(255)"))
+            except Exception:
+                pass
+        logger.info("Database schema verified and initialized.")
+    except Exception as e:
+        logger.error(f"Non-fatal warning during startup schema initialization: {e}", exc_info=True)
 
 @app.on_event("shutdown")
 async def shutdown_event():
