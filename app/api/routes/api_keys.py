@@ -19,10 +19,12 @@ async def create_api_key(
 ):
     raw_key, key_hash = generate_api_key()
     
+    prefix = raw_key[:10]
     api_key = APIKey(
         project_id=project_id,
         key_hash=key_hash,
-        name=name
+        key_name=name,
+        key_prefix=prefix
     )
     db.add(api_key)
     await db.commit()
@@ -40,7 +42,7 @@ async def revoke_api_key(
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_active_admin)
 ):
-    stmt = update(APIKey).where(APIKey.id == key_id).values(is_revoked=True)
+    stmt = update(APIKey).where(APIKey.id == key_id).values(revoked=True)
     result = await db.execute(stmt)
     await db.commit()
     

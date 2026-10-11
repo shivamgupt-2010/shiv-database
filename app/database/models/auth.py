@@ -19,6 +19,10 @@ class User(Base):
 
     sessions: Mapped[list["Session"]] = relationship("Session", back_populates="user", cascade="all, delete-orphan")
 
+    @property
+    def is_active(self) -> bool:
+        return self.status == "active"
+
 
 class Role(Base):
     __tablename__ = "roles"

@@ -18,6 +18,10 @@ class Project(Base):
 
     api_keys: Mapped[list["APIKey"]] = relationship("APIKey", back_populates="project", cascade="all, delete-orphan")
 
+    @property
+    def is_active(self) -> bool:
+        return self.status == "active"
+
 
 class APIKey(Base):
     __tablename__ = "api_keys"
@@ -32,6 +36,14 @@ class APIKey(Base):
     last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     project: Mapped["Project"] = relationship("Project", back_populates="api_keys")
+
+    @property
+    def is_revoked(self) -> bool:
+        return self.revoked
+
+    @property
+    def name(self) -> str:
+        return self.key_name
 
 
 class ProviderConfig(Base):
