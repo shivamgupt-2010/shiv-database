@@ -63,7 +63,8 @@ def create_app() -> FastAPI:
     @app.exception_handler(SQLAlchemyError)
     async def db_exception_handler(request: Request, exc: SQLAlchemyError):
         logger.error(f"Database Error: {str(exc)}")
-        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+        detail = str(exc) if settings.DEBUG else "Internal server error"
+        return JSONResponse(status_code=500, content={"detail": detail})
 
     # Routers
     app.include_router(health.router)
@@ -87,6 +88,16 @@ app = create_app()
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting SHIV DB & Auth service...")
+    from app.database.session import engine
+    from app.database.models.base import Base
+    import app.database.models.auth
+    import app.database.models.project
+    import app.database.models.record
+    import app.database.models.audit
+    import app.database.models.fabric
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("Database schema verified and initialized.")
 
 @app.on_event("shutdown")
 async def shutdown_event():
