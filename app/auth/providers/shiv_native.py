@@ -57,7 +57,7 @@ class ShivNativeAuthProvider(AuthProvider):
         if not verify_password(password, user.hashed_password):
             raise AuthenticationError("Invalid email or password")
             
-        if not user.is_active:
+        if user.status != "active":
             raise AuthenticationError("User account is inactive")
             
         return user
@@ -78,15 +78,13 @@ class ShivNativeAuthProvider(AuthProvider):
             raise AuthenticationError("User not found")
             
         if "password" in data:
-            user.password_hash = get_password_hash(data["password"])
+            user.hashed_password = get_password_hash(data["password"])
         if "email" in data:
             user.email = data["email"]
-        if "metadata_" in data:
-            user.metadata_ = data["metadata_"]
-        if "is_active" in data:
-            user.is_active = data["is_active"]
-        if "is_verified" in data:
-            user.is_verified = data["is_verified"]
+        if "status" in data:
+            user.status = data["status"]
+        if "email_verified" in data:
+            user.email_verified = data["email_verified"]
             
         await self.db.commit()
         await self.db.refresh(user)
