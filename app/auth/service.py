@@ -16,6 +16,12 @@ class AuthService:
         # so users can traverse apps seamlessly. We use Native provider to keep it free and unlimited.
         self.provider = ShivNativeAuthProvider(db)
 
+    def _get_provider(self):
+        return self.provider
+
+    async def get_user_by_id(self, user_id: str) -> Optional[User]:
+        return await self.provider.get_user_by_id(user_id)
+
     async def register(self, email: str, username: str, password: str, metadata: Optional[Dict[str, Any]] = None, project: Optional[Project] = None) -> User:
         # Project parameter is ignored because auth is global across all projects
         return await self.provider.register_user({
