@@ -9,6 +9,7 @@ class ProjectCreateRequest(BaseModel):
     primary_provider: str = Field(default="shiv_native")
     fallback_provider: Optional[str] = None
     enabled_providers: List[str] = Field(default_factory=lambda: ["shiv_native"])
+    auth_provider: Optional[str] = None
 
 
 class ProjectUpdateRequest(BaseModel):
