@@ -4,6 +4,7 @@ from enum import Enum
 class RoleEnum(str, Enum):
     USER = "user"
     ADMIN = "admin"
+    SUPER_ADMIN = "super_admin"
     DEVELOPER = "developer"
     SERVICE = "service"
 
@@ -87,6 +88,17 @@ DEFAULT_ROLE_PERMISSIONS = {
         PermissionEnum.PROJECT_WRITE,
     ],
     RoleEnum.ADMIN: [
+        PermissionEnum.USER_READ,
+        PermissionEnum.USER_WRITE,
+        PermissionEnum.DATABASE_READ,
+        PermissionEnum.DATABASE_WRITE,
+        PermissionEnum.PROJECT_READ,
+        PermissionEnum.PROJECT_WRITE,
+        PermissionEnum.PROJECT_ADMIN,
+        PermissionEnum.ADMIN_USERS,
+        PermissionEnum.ADMIN_SYSTEM,
+    ],
+    RoleEnum.SUPER_ADMIN: [
         PermissionEnum.USER_READ,
         PermissionEnum.USER_WRITE,
         PermissionEnum.DATABASE_READ,
