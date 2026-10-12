@@ -66,14 +66,26 @@ def sanitize_database_url(url: str) -> str:
     if "postgresql+asyncpg://" in url:
         parsed = urlparse(url)
         query = parse_qs(parsed.query)
+        
+        has_ssl = False
         if "sslmode" in query:
-            ssl_val = query.pop("sslmode")[0]
-            if ssl_val in ("require", "prefer", "verify-ca", "verify-full"):
-                query["ssl"] = ["require"]
-            elif ssl_val == "disable":
-                query["ssl"] = ["disable"]
-        new_query = urlencode(query, doseq=True)
-        url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+            val = query.pop("sslmode")[0]
+            if val != "disable":
+                has_ssl = True
+        if "ssl" in query:
+            val = query.pop("ssl")[0]
+            if val not in ("0", "false", "disable"):
+                has_ssl = True
+        else:
+            has_ssl = True
+            
+        allowed = {"statement_cache_size", "command_timeout", "server_settings"}
+        new_query = {k: v for k, v in query.items() if k in allowed}
+        if has_ssl:
+            new_query["ssl"] = ["require"]
+            
+        new_qs = urlencode(new_query, doseq=True)
+        url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_qs, parsed.fragment))
     return url
 
 settings.DATABASE_URL = sanitize_database_url(settings.DATABASE_URL)
