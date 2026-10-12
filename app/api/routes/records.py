@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from app.database.schemas.common import SuccessResponse
 from app.database.schemas.records import QueryRequest
 from app.database.models.project import Project
 from app.database.models.auth import User
 from app.database.service import DatabaseService
 from app.audit.service import AuditService
-from app.api.dependencies import get_database_service, get_project_by_api_key, get_current_user, get_audit_service
+from app.api.dependencies import get_database_service, get_project_by_api_key, get_current_user, get_optional_current_user, get_audit_service
 
 router = APIRouter(prefix="/data", tags=["Data/Records"])
 
@@ -17,16 +17,17 @@ async def create_record(
     project: Project = Depends(get_project_by_api_key),
     db_service: DatabaseService = Depends(get_database_service),
     audit_service: AuditService = Depends(get_audit_service),
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     record = await db_service.create_record(project, collection, data)
     
+    actor = current_user.id if current_user else f"api_key:{project.name}"
     await audit_service.log_action(
         action="create_record",
         resource_type=f"collection:{collection}",
         resource_id=record["id"],
         project_id=project.id,
-        actor_id=current_user.id
+        actor_id=actor
     )
     
     return SuccessResponse(data=record, message="Record created")
@@ -54,19 +55,20 @@ async def update_record(
     project: Project = Depends(get_project_by_api_key),
     db_service: DatabaseService = Depends(get_database_service),
     audit_service: AuditService = Depends(get_audit_service),
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     record = await db_service.update_record(project, collection, record_id, data)
     if not record:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Record not found")
         
+    actor = current_user.id if current_user else f"api_key:{project.name}"
     await audit_service.log_action(
         action="update_record",
         resource_type=f"collection:{collection}",
         resource_id=record["id"],
         project_id=project.id,
-        actor_id=current_user.id
+        actor_id=actor
     )
         
     return SuccessResponse(data=record)
@@ -79,19 +81,20 @@ async def delete_record(
     project: Project = Depends(get_project_by_api_key),
     db_service: DatabaseService = Depends(get_database_service),
     audit_service: AuditService = Depends(get_audit_service),
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     success = await db_service.delete_record(project, collection, record_id)
     if not success:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Record not found")
         
+    actor = current_user.id if current_user else f"api_key:{project.name}"
     await audit_service.log_action(
         action="delete_record",
         resource_type=f"collection:{collection}",
         resource_id=record_id,
         project_id=project.id,
-        actor_id=current_user.id
+        actor_id=actor
     )
         
     return SuccessResponse(data={"deleted": True}, message="Record deleted")
