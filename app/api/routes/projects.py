@@ -18,12 +18,25 @@ async def create_project(
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_active_admin)
 ):
+    # Check if project with same name already exists
+    stmt = select(Project).where(Project.name == body.name)
+    result = await db.execute(stmt)
+    existing_project = result.scalar_one_or_none()
+    if existing_project:
+        return SuccessResponse(data={"id": existing_project.id, "name": existing_project.name}, message="Project already exists")
+
+    enabled_prov = body.enabled_providers
+    if isinstance(enabled_prov, list):
+        enabled_prov_str = ",".join(enabled_prov)
+    else:
+        enabled_prov_str = str(enabled_prov or "shiv_native")
+
     project = Project(
         name=body.name,
         description=body.description,
-        primary_provider=body.primary_provider,
+        primary_provider=body.primary_provider or "shiv_native",
         fallback_provider=body.fallback_provider,
-        auth_provider=body.auth_provider,
+        enabled_providers=enabled_prov_str,
     )
     db.add(project)
     await db.commit()
