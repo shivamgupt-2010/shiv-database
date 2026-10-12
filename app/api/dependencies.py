@@ -45,10 +45,13 @@ async def get_current_user(
         if user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
             
-        # Get native provider to fetch user record (since JWT maps to our local DB User record)
-        # Even if Firebase authenticated originally, SHIV Auth synchronizes users.
-        native_provider = auth_service._get_provider()
-        user = await native_provider.get_user_by_id(user_id)
+        # Fetch user record from native provider
+        if hasattr(auth_service, "get_user_by_id"):
+            user = await auth_service.get_user_by_id(user_id)
+        elif hasattr(auth_service, "_get_provider"):
+            user = await auth_service._get_provider().get_user_by_id(user_id)
+        else:
+            user = await auth_service.provider.get_user_by_id(user_id)
         
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
@@ -56,6 +59,8 @@ async def get_current_user(
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
             
         return user
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -63,10 +68,30 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+async def get_optional_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    auth_service: AuthService = Depends(get_auth_service),
+    db: AsyncSession = Depends(get_db)
+) -> Optional[User]:
+    """Dependency to optionally get authenticated user if Bearer token present, else None."""
+    if not credentials:
+        return None
+    try:
+        payload = await auth_service.verify_user_token(credentials.credentials)
+        user_id: str = payload.get("sub")
+        if not user_id:
+            return None
+        if hasattr(auth_service, "get_user_by_id"):
+            return await auth_service.get_user_by_id(user_id)
+        return await auth_service.provider.get_user_by_id(user_id)
+    except Exception:
+        return None
+
 async def get_current_active_admin(current_user: User = Depends(get_current_user)) -> User:
     """Dependency ensuring user is an admin."""
     from app.core.constants import RoleEnum
-    if current_user.role not in [RoleEnum.ADMIN.value, RoleEnum.SUPER_ADMIN.value]:
+    allowed_roles = [RoleEnum.ADMIN.value, RoleEnum.SUPER_ADMIN.value, "admin", "super_admin"]
+    if current_user.role not in allowed_roles:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permissions")
     return current_user
 
