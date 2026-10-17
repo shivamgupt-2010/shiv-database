@@ -7,7 +7,7 @@ from app.database.schemas.common import SuccessResponse
 from app.database.schemas.projects import ProjectCreateRequest
 from app.database.models.project import Project
 from app.database.models.auth import User
-from app.api.dependencies import get_current_active_admin
+from app.api.dependencies import get_current_user
 import uuid
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/projects", tags=["Projects"])
 async def create_project(
     body: ProjectCreateRequest,
     db: AsyncSession = Depends(get_db),
-    current_admin: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_user)
 ):
     # Check if project with same name already exists
     stmt = select(Project).where(Project.name == body.name)
@@ -48,7 +48,7 @@ async def create_project(
 @router.get("/", response_model=SuccessResponse)
 async def list_projects(
     db: AsyncSession = Depends(get_db),
-    current_admin: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_user)
 ):
     stmt = select(Project).where(Project.is_active == True)
     result = await db.execute(stmt)
