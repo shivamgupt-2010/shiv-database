@@ -18,17 +18,29 @@ class AuditService:
         project_id: Optional[str] = None,
         actor_id: Optional[str] = None,
         ip_address: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        status: str = "success"
     ) -> AuditLog:
         """Record an action in the audit log."""
+        import uuid
+        req_id = str(uuid.uuid4())
+        details = metadata or {}
+        if resource_id:
+            details["resource_id"] = resource_id
+        if actor_id:
+            details["actor_id"] = actor_id
+
         log_entry = AuditLog(
-            action=action,
-            resource_type=resource_type,
-            resource_id=resource_id,
+            request_id=req_id,
             project_id=project_id,
-            actor_id=actor_id,
-            ip_address=ip_address,
-            metadata_=metadata or {}
+            user_id=actor_id if (actor_id and not str(actor_id).startswith("api_key:")) else None,
+            event_type=resource_type,
+            operation=action,
+            resource=f"{resource_type}:{resource_id}" if resource_id else resource_type,
+            provider="shiv_native",
+            status=status,
+            details_json=json.dumps(details),
+            ip_address=ip_address
         )
         self.db.add(log_entry)
         await self.db.commit()
@@ -47,9 +59,9 @@ class AuditService:
         stmt = select(AuditLog).where(AuditLog.project_id == project_id)
         
         if action:
-            stmt = stmt.where(AuditLog.action == action)
+            stmt = stmt.where(AuditLog.operation == action)
         if actor_id:
-            stmt = stmt.where(AuditLog.actor_id == actor_id)
+            stmt = stmt.where(AuditLog.user_id == actor_id)
             
         stmt = stmt.order_by(desc(AuditLog.created_at)).limit(limit).offset(offset)
         
