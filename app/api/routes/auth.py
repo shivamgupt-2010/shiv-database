@@ -69,6 +69,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
     return SuccessResponse(data={
         "id": current_user.id,
         "email": current_user.email,
+        "username": current_user.username,
         "role": current_user.role,
-        "metadata": current_user.metadata_
+        "metadata": getattr(current_user, "metadata_", None) or {}
     })
