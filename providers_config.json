@@ -50,11 +50,7 @@
         "shiv3_firebase"
     ],
     "storage_pool": [
-        "jeeprep_firebase",
-        "shiv_firebase",
-        "shiv1_firebase",
-        "shiv2_firebase",
-        "shiv3_firebase"
+        "shiv_native"
     ],
     "default": "shiv_native"
 }
