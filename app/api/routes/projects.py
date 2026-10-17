@@ -50,9 +50,9 @@ async def list_projects(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    stmt = select(Project).where(Project.is_active == True)
+    stmt = select(Project).where(Project.status == "active").order_by(Project.created_at.desc())
     result = await db.execute(stmt)
     projects = result.scalars().all()
     
-    data = [{"id": p.id, "name": p.name, "primary_provider": p.primary_provider} for p in projects]
+    data = [{"id": p.id, "name": p.name, "primary_provider": p.primary_provider, "description": p.description or ""} for p in projects]
     return SuccessResponse(data=data)
