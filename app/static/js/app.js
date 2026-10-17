@@ -126,6 +126,22 @@ document.addEventListener('DOMContentLoaded', () => {
     async function showDashboard() {
         authView.classList.add('hidden');
         dashboardView.classList.remove('hidden');
+
+        // Fetch current user details to display in navbar
+        try {
+            const meRes = await apiRequest('/auth/me');
+            if (meRes && meRes.data) {
+                const badge = document.getElementById('user-info-badge');
+                if (badge) {
+                    const identifier = meRes.data.email || meRes.data.username;
+                    const role = meRes.data.role || 'admin';
+                    badge.textContent = `${identifier} (${role})`;
+                }
+            }
+        } catch (err) {
+            console.warn('Could not load user profile:', err);
+        }
+
         await fetchProjects();
     }
 
@@ -136,9 +152,20 @@ document.addEventListener('DOMContentLoaded', () => {
             ...options.headers
         };
         const res = await fetch(endpoint, { ...options, headers });
-        if (res.status === 401 || res.status === 403) {
-            logoutBtn.click();
+        if (res.status === 401) {
+            token = null;
+            localStorage.removeItem('shiv_token');
+            authView.classList.remove('hidden');
+            dashboardView.classList.add('hidden');
+            if (loginError) {
+                loginError.textContent = 'Session expired. Please log in again.';
+                loginError.classList.remove('hidden');
+            }
             throw new Error('Unauthorized');
+        }
+        if (res.status === 403) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || 'Access forbidden: Insufficient permissions.');
         }
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'API Error');
@@ -149,9 +176,10 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchProjects() {
         try {
             const data = await apiRequest('/projects/');
-            renderProjects(data.data);
+            renderProjects(data.data || []);
         } catch (err) {
             console.error('Failed to fetch projects', err);
+            projectsList.innerHTML = `<li><span class="text-danger" style="color: #ef4444;">${err.message}</span></li>`;
         }
     }
 
