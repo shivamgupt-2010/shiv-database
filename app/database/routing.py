@@ -49,8 +49,14 @@ class PoolRouter:
         self.default_provider_id = config_dict.get("default", "shiv_native")
         logger.info(f"True Data Pool initialized with {len(self.pool_nodes)} active nodes (Total available providers: {len(self.providers)}).")
 
-    def get_provider_for_new_record(self) -> tuple[DatabaseProvider, str]:
-        """Picks an instance from the pool for a new record (Round Robin / Random)."""
+    def get_provider_for_new_record(self, preferred_provider: Optional[str] = None) -> tuple[DatabaseProvider, str]:
+        """Picks an instance from the pool for a new record, respecting preferred_provider if set."""
+        if preferred_provider:
+            if preferred_provider == "shiv_native":
+                return self.native_provider, "shiv_native"
+            if preferred_provider in self.providers:
+                return self.providers[preferred_provider], preferred_provider
+
         if not self.pool_nodes:
             logger.warning("No pool nodes configured. Falling back to native.")
             return self.native_provider, "shiv_native"
