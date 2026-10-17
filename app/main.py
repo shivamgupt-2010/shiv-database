@@ -103,6 +103,7 @@ async def startup_event():
         import app.database.models.record
         import app.database.models.audit
         import app.database.models.fabric
+        import app.database.models.media
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             try:
