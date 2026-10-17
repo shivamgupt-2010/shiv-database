@@ -37,7 +37,8 @@ class DatabaseService:
         if not record_id:
             record_id = str(uuid.uuid4())
 
-        provider, node_id = self.router.get_provider_for_new_record()
+        pref = getattr(project, "primary_provider", None) or "shiv_native"
+        provider, node_id = self.router.get_provider_for_new_record(preferred_provider=pref)
         
         # Extract dynamic indexing
         indexed_data = data.pop("_index", {})
