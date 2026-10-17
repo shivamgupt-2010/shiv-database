@@ -2,7 +2,7 @@ import base64
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, text
 
 from app.database.models.media import MediaFile
 
@@ -15,6 +15,27 @@ class StoragePoolService:
     Stores and serves files directly via persistent database storage with zero external dependencies,
     zero cloud fees, and no credit card required.
     """
+
+    async def _ensure_table(self, db: AsyncSession):
+        """Creates the media_files table on-the-fly if it doesn't already exist."""
+        try:
+            await db.execute(text("""
+                CREATE TABLE IF NOT EXISTS media_files (
+                    id VARCHAR(36) PRIMARY KEY,
+                    project_id VARCHAR(36) NOT NULL,
+                    file_name VARCHAR(255) NOT NULL,
+                    content_type VARCHAR(100) NOT NULL,
+                    size_bytes INTEGER NOT NULL DEFAULT 0,
+                    data_base64 TEXT NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            await db.execute(text("CREATE INDEX IF NOT EXISTS ix_media_files_project_id ON media_files (project_id)"))
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            logger.warning(f"Failed to auto-create media_files table: {e}")
 
     async def upload_file(
         self,
@@ -40,9 +61,20 @@ class StoragePoolService:
             size_bytes=size_bytes,
             data_base64=data_b64,
         )
-        db.add(media_record)
-        await db.commit()
-        await db.refresh(media_record)
+
+        try:
+            db.add(media_record)
+            await db.commit()
+            await db.refresh(media_record)
+        except Exception as e:
+            await db.rollback()
+            if "media_files" in str(e).lower():
+                await self._ensure_table(db)
+                db.add(media_record)
+                await db.commit()
+                await db.refresh(media_record)
+            else:
+                raise
 
         clean_base = base_url.rstrip("/") if base_url else ""
         file_url = f"{clean_base}/storage/file/{media_record.id}"
@@ -63,9 +95,17 @@ class StoragePoolService:
         Fetches a file record by ID and decodes the binary content.
         Returns (file_bytes, content_type, file_name) or None if not found.
         """
-        stmt = select(MediaFile).where(MediaFile.id == file_id)
-        res = await db.execute(stmt)
-        record = res.scalar_one_or_none()
+        try:
+            stmt = select(MediaFile).where(MediaFile.id == file_id)
+            res = await db.execute(stmt)
+            record = res.scalar_one_or_none()
+        except Exception as e:
+            await db.rollback()
+            if "media_files" in str(e).lower():
+                await self._ensure_table(db)
+                return None
+            raise
+
         if not record:
             return None
 
@@ -87,15 +127,22 @@ class StoragePoolService:
         """
         Lists stored files for a specific project.
         """
-        stmt = (
-            select(MediaFile)
-            .where(MediaFile.project_id == project_id)
-            .order_by(MediaFile.created_at.desc())
-            .limit(limit)
-            .offset(offset)
-        )
-        res = await db.execute(stmt)
-        records = res.scalars().all()
+        try:
+            stmt = (
+                select(MediaFile)
+                .where(MediaFile.project_id == project_id)
+                .order_by(MediaFile.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+            res = await db.execute(stmt)
+            records = res.scalars().all()
+        except Exception as e:
+            await db.rollback()
+            if "media_files" in str(e).lower():
+                await self._ensure_table(db)
+                return []
+            raise
 
         clean_base = base_url.rstrip("/") if base_url else ""
         return [
@@ -114,15 +161,22 @@ class StoragePoolService:
         """
         Deletes a stored file by ID.
         """
-        stmt = select(MediaFile).where(MediaFile.id == file_id)
-        if project_id:
-            stmt = stmt.where(MediaFile.project_id == project_id)
+        try:
+            stmt = select(MediaFile).where(MediaFile.id == file_id)
+            if project_id:
+                stmt = stmt.where(MediaFile.project_id == project_id)
 
-        res = await db.execute(stmt)
-        record = res.scalar_one_or_none()
-        if not record:
-            return False
+            res = await db.execute(stmt)
+            record = res.scalar_one_or_none()
+            if not record:
+                return False
 
-        await db.delete(record)
-        await db.commit()
-        return True
+            await db.delete(record)
+            await db.commit()
+            return True
+        except Exception as e:
+            await db.rollback()
+            if "media_files" in str(e).lower():
+                await self._ensure_table(db)
+                return False
+            raise
