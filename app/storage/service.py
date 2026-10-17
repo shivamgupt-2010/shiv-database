@@ -1,58 +1,128 @@
-import random
-import os
-import json
+import base64
 import logging
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, List, Optional, Tuple
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete
+
+from app.database.models.media import MediaFile
 
 logger = logging.getLogger(__name__)
 
+
 class StoragePoolService:
     """
-    Unlimited File & Image Pooling (Media Sharding).
-    Distributes raw file uploads across multiple Firebase Storage buckets.
+    SHIV Native Media & Blob Storage Engine.
+    Stores and serves files directly via persistent database storage with zero external dependencies,
+    zero cloud fees, and no credit card required.
     """
-    def __init__(self):
-        self.storage_nodes: Dict[str, Dict[str, Any]] = {}
-        self.pool: list[str] = []
-        
-        # Load config
-        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "providers_config.json")
-        try:
-            if os.path.exists(config_path):
-                with open(config_path, "r") as f:
-                    config = json.load(f)
-                    self.pool = config.get("storage_pool", [])
-                    instances = config.get("instances", {})
-                    for node_id in self.pool:
-                        if node_id in instances:
-                            self.storage_nodes[node_id] = instances[node_id]
-        except Exception as e:
-            logger.error(f"Failed to load storage config: {e}")
 
-    def _get_random_node(self) -> Tuple[str, Dict[str, Any]]:
-        if not self.pool:
-            raise RuntimeError("No storage nodes available in the pool")
-        node_id = random.choice(self.pool)
-        return node_id, self.storage_nodes[node_id]
+    async def upload_file(
+        self,
+        db: AsyncSession,
+        project_id: str,
+        file_name: str,
+        file_bytes: bytes,
+        content_type: str,
+        base_url: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Uploads and persists a file to the database.
+        Returns a permanent public URL and file metadata.
+        """
+        data_b64 = base64.b64encode(file_bytes).decode('ascii')
+        size_bytes = len(file_bytes)
+        safe_content_type = content_type or "application/octet-stream"
 
-    async def upload_file(self, project_id: str, file_name: str, file_bytes: bytes, content_type: str) -> Dict[str, Any]:
-        """
-        Picks a random bucket from the pool and uploads the file there.
-        In a real implementation, uses firebase_admin.storage or direct REST.
-        """
-        node_id, node_config = self._get_random_node()
-        bucket_name = node_config.get("storage_bucket")
-        
-        # Mock upload implementation (in production, use firebase-admin SDK to upload file_bytes)
-        logger.info(f"[StoragePool] Uploading {file_name} to {bucket_name} on node {node_id}")
-        
-        file_url = f"https://firebasestorage.googleapis.com/v0/b/{bucket_name}/o/{file_name}?alt=media"
-        
+        media_record = MediaFile(
+            project_id=project_id,
+            file_name=file_name,
+            content_type=safe_content_type,
+            size_bytes=size_bytes,
+            data_base64=data_b64,
+        )
+        db.add(media_record)
+        await db.commit()
+        await db.refresh(media_record)
+
+        clean_base = base_url.rstrip("/") if base_url else ""
+        file_url = f"{clean_base}/storage/file/{media_record.id}"
+
+        logger.info(f"[StorageEngine] Persisted {file_name} ({size_bytes} bytes) for project {project_id} -> {file_url}")
+
         return {
-            "file_name": file_name,
+            "id": media_record.id,
+            "file_name": media_record.file_name,
             "url": file_url,
-            "node_id": node_id,
-            "bucket": bucket_name,
-            "size": len(file_bytes),
-            "content_type": content_type
+            "content_type": media_record.content_type,
+            "size": media_record.size_bytes,
+            "created_at": media_record.created_at.isoformat() if media_record.created_at else None,
         }
+
+    async def get_file(self, db: AsyncSession, file_id: str) -> Optional[Tuple[bytes, str, str]]:
+        """
+        Fetches a file record by ID and decodes the binary content.
+        Returns (file_bytes, content_type, file_name) or None if not found.
+        """
+        stmt = select(MediaFile).where(MediaFile.id == file_id)
+        res = await db.execute(stmt)
+        record = res.scalar_one_or_none()
+        if not record:
+            return None
+
+        try:
+            file_bytes = base64.b64decode(record.data_base64.encode('ascii'))
+            return file_bytes, record.content_type, record.file_name
+        except Exception as e:
+            logger.error(f"Failed to decode file {file_id}: {e}")
+            return None
+
+    async def list_files(
+        self,
+        db: AsyncSession,
+        project_id: str,
+        base_url: str = "",
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """
+        Lists stored files for a specific project.
+        """
+        stmt = (
+            select(MediaFile)
+            .where(MediaFile.project_id == project_id)
+            .order_by(MediaFile.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        res = await db.execute(stmt)
+        records = res.scalars().all()
+
+        clean_base = base_url.rstrip("/") if base_url else ""
+        return [
+            {
+                "id": r.id,
+                "file_name": r.file_name,
+                "url": f"{clean_base}/storage/file/{r.id}",
+                "content_type": r.content_type,
+                "size": r.size_bytes,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in records
+        ]
+
+    async def delete_file(self, db: AsyncSession, file_id: str, project_id: Optional[str] = None) -> bool:
+        """
+        Deletes a stored file by ID.
+        """
+        stmt = select(MediaFile).where(MediaFile.id == file_id)
+        if project_id:
+            stmt = stmt.where(MediaFile.project_id == project_id)
+
+        res = await db.execute(stmt)
+        record = res.scalar_one_or_none()
+        if not record:
+            return False
+
+        await db.delete(record)
+        await db.commit()
+        return True
