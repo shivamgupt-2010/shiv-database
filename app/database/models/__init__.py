@@ -13,6 +13,7 @@ from app.database.models.project import Project, APIKey, ProviderConfig
 from app.database.models.audit import AuditLog
 from app.database.models.record import GenericRecord
 from app.database.models.fabric import FabricIndex
+from app.database.models.media import MediaFile
 
 __all__ = [
     "Base",
@@ -30,4 +31,6 @@ __all__ = [
     "AuditLog",
     "GenericRecord",
     "FabricIndex",
+    "MediaFile",
 ]
+
