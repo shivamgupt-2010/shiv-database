@@ -100,11 +100,15 @@
                         </div>
                         <div class="card-body">
                             <div class="key-actions hidden" id="key-actions">
-                                <button class="btn primary-btn w-full" id="generate-key-btn">Generate New API Key</button>
+                                <button class="btn primary-btn w-full" id="generate-key-btn">+ Generate New API Key</button>
                             </div>
-                            <!-- Currently we don't have a GET /api-keys/ route in this backend to list keys securely, so we'll just allow generating. -->
-                            <!-- We can show generated keys temporarily here. -->
                             <div id="generated-keys-container" class="mt-4"></div>
+                            <div class="keys-list-container mt-4 hidden" id="keys-list-container">
+                                <h4 style="font-size: 0.9rem; margin-bottom: 10px; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.5px;">Active Project Keys</h4>
+                                <ul id="api-keys-list" class="item-list">
+                                    <!-- Populated by JS -->
+                                </ul>
+                            </div>
                         </div>
                     </section>
                 </div>
