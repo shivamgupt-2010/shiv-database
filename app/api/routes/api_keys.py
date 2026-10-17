@@ -10,22 +10,62 @@ from app.security.api_keys import generate_api_key
 
 router = APIRouter(prefix="/api-keys", tags=["API Keys"])
 
-@router.post("/{project_id}", response_model=SuccessResponse)
-async def create_api_key(
+from fastapi import Request
+from typing import Optional
+
+@router.get("/{project_id}", response_model=SuccessResponse)
+async def list_api_keys(
     project_id: str,
-    name: str = "Production Key",
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     # Verify project exists by id or by name
-    stmt = select(Project).where(Project.id == project_id)
+    stmt = select(Project).where((Project.id == project_id) | (Project.name == project_id))
     result = await db.execute(stmt)
     proj = result.scalar_one_or_none()
     if not proj:
-        stmt2 = select(Project).where(Project.name == project_id)
-        result2 = await db.execute(stmt2)
-        proj = result2.scalar_one_or_none()
-        
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
+
+    stmt_keys = select(APIKey).where(APIKey.project_id == proj.id).order_by(APIKey.created_at.desc())
+    result_keys = await db.execute(stmt_keys)
+    keys = result_keys.scalars().all()
+
+    data = [
+        {
+            "id": k.id,
+            "name": k.key_name,
+            "key_prefix": k.key_prefix,
+            "revoked": k.revoked,
+            "created_at": k.created_at.isoformat() if k.created_at else None,
+            "last_used_at": k.last_used_at.isoformat() if k.last_used_at else None
+        }
+        for k in keys
+    ]
+    return SuccessResponse(data=data)
+
+
+@router.post("/{project_id}", response_model=SuccessResponse)
+async def create_api_key(
+    project_id: str,
+    request: Request,
+    name: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # If name was not provided as query param, check JSON body
+    if not name:
+        try:
+            body_json = await request.json()
+            name = body_json.get("name") or body_json.get("key_name")
+        except Exception:
+            pass
+    if not name:
+        name = "Production Key"
+
+    # Verify project exists by id or by name
+    stmt = select(Project).where((Project.id == project_id) | (Project.name == project_id))
+    result = await db.execute(stmt)
+    proj = result.scalar_one_or_none()
     if not proj:
         raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found")
         
@@ -45,7 +85,7 @@ async def create_api_key(
     await db.refresh(api_key)
     
     return SuccessResponse(
-        data={"id": api_key.id, "name": api_key.name, "raw_key": raw_key},
+        data={"id": api_key.id, "name": api_key.name, "raw_key": raw_key, "key_prefix": prefix},
         message="API Key created. Save this raw_key now; it won't be shown again."
     )
 
