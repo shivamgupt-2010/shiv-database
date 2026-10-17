@@ -110,8 +110,34 @@
                                 </ul>
                             </div>
                         </div>
-                    </section>
                 </div>
+
+                <!-- Media & Storage Section (Zero-Cost Native Storage) -->
+                <section class="glass-card section-card mt-6" id="storage-section" style="margin-top: 2rem;">
+                    <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="display: flex; align-items: center; gap: 8px;">
+                                Media & File Storage
+                                <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 0.75rem; padding: 2px 8px; border-radius: 9999px; font-weight: 600;">100% Free / Zero Cloud Cost</span>
+                            </h3>
+                            <p class="subtitle" style="font-size: 0.85rem; color: #a1a1aa; margin-top: 4px;">
+                                Permanent binary storage for images, photos, and assets. Bypasses paid Firebase buckets with zero credit card required.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="file" id="media-file-input" style="display: none;">
+                            <button class="btn primary-btn" id="upload-media-btn" style="width: auto; padding: 8px 16px; font-size: 0.9rem;" disabled>+ Upload Media</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="upload-progress-box" class="hidden" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 12px 16px; border-radius: 8px; margin-bottom: 15px; color: #93c5fd; font-size: 0.85rem;">
+                            Uploading file to SHIV Native Storage...
+                        </div>
+                        <div id="media-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem;">
+                            <div style="color: #71717a; font-size: 0.85rem; grid-column: 1 / -1; padding: 20px 0;">Select a project above to view its media files.</div>
+                        </div>
+                    </div>
+                </section>
             </main>
         </div>
         
