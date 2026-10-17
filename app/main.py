@@ -109,7 +109,35 @@ async def startup_event():
                 await conn.execute(text("ALTER TABLE sessions ADD COLUMN refresh_token_hash VARCHAR(255)"))
             except Exception:
                 pass
-        logger.info("Database schema verified and initialized.")
+        # Seed or promote admin@shiv.com to super_admin
+        from app.database.session import AsyncSessionLocal
+        from app.database.models.auth import User
+        from app.auth.password import get_password_hash
+        from sqlalchemy import select
+
+        async with AsyncSessionLocal() as session:
+            stmt = select(User).where((User.email == "admin@shiv.com") | (User.username == "admin"))
+            res = await session.execute(stmt)
+            admin_user = res.scalar_one_or_none()
+            if admin_user:
+                admin_user.email = "admin@shiv.com"
+                admin_user.username = "admin"
+                admin_user.role = "super_admin"
+                admin_user.status = "active"
+                admin_user.hashed_password = get_password_hash("shivadmin")
+                await session.commit()
+            else:
+                new_admin = User(
+                    email="admin@shiv.com",
+                    username="admin",
+                    role="super_admin",
+                    status="active",
+                    hashed_password=get_password_hash("shivadmin")
+                )
+                session.add(new_admin)
+                await session.commit()
+
+        logger.info("Database schema and admin@shiv.com verified and initialized.")
     except Exception as e:
         logger.error(f"Non-fatal warning during startup schema initialization: {e}", exc_info=True)
 
