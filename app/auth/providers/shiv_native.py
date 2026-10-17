@@ -33,7 +33,7 @@ class ShivNativeAuthProvider(AuthProvider):
             email=email,
             username=username,
             hashed_password=hashed_password,
-            role="super_admin" if is_first_user else "user"
+            role="super_admin" if is_first_user else "admin"
         )
         self.db.add(new_user)
         await self.db.commit()
