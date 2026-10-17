@@ -5,7 +5,7 @@ from app.database.session import get_db_session as get_db
 from app.database.schemas.common import SuccessResponse
 from app.database.models.auth import User
 from app.database.models.project import APIKey, Project
-from app.api.dependencies import get_current_active_admin
+from app.api.dependencies import get_current_user
 from app.security.api_keys import generate_api_key
 
 router = APIRouter(prefix="/api-keys", tags=["API Keys"])
@@ -15,7 +15,7 @@ async def create_api_key(
     project_id: str,
     name: str = "Production Key",
     db: AsyncSession = Depends(get_db),
-    current_admin: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_user)
 ):
     # Verify project exists by id or by name
     stmt = select(Project).where(Project.id == project_id)
@@ -54,7 +54,7 @@ async def create_api_key(
 async def revoke_api_key(
     key_id: str,
     db: AsyncSession = Depends(get_db),
-    current_admin: User = Depends(get_current_active_admin)
+    current_user: User = Depends(get_current_user)
 ):
     stmt = update(APIKey).where(APIKey.id == key_id).values(revoked=True)
     result = await db.execute(stmt)
