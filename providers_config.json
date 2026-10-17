@@ -42,12 +42,12 @@
         }
     },
     "pool": [
+        "shiv_native",
         "jeeprep_firebase",
         "shiv_firebase",
         "shiv1_firebase",
         "shiv2_firebase",
-        "shiv3_firebase",
-        "supabase_analytics"
+        "shiv3_firebase"
     ],
     "storage_pool": [
         "jeeprep_firebase",
