@@ -18,8 +18,8 @@ async def create_project(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Check if project with same name already exists
-    stmt = select(Project).where(Project.name == body.name)
+    # Check if project with same name already exists for this user
+    stmt = select(Project).where(Project.name == body.name, Project.owner_id == current_user.id)
     result = await db.execute(stmt)
     existing_project = result.scalar_one_or_none()
     if existing_project:
@@ -37,6 +37,7 @@ async def create_project(
         primary_provider=body.primary_provider or "shiv_native",
         fallback_provider=body.fallback_provider,
         enabled_providers=enabled_prov_str,
+        owner_id=current_user.id
     )
     db.add(project)
     await db.commit()
@@ -50,9 +51,28 @@ async def list_projects(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    stmt = select(Project).where(Project.status == "active").order_by(Project.created_at.desc())
+    stmt = select(Project).where(
+        Project.status == "active",
+        Project.owner_id == current_user.id
+    ).order_by(Project.created_at.desc())
     result = await db.execute(stmt)
     projects = result.scalars().all()
     
     data = [{"id": p.id, "name": p.name, "primary_provider": p.primary_provider, "description": p.description or ""} for p in projects]
     return SuccessResponse(data=data)
+
+
+@router.delete("/{project_id}", response_model=SuccessResponse)
+async def delete_project(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    stmt = select(Project).where(Project.id == project_id, Project.owner_id == current_user.id)
+    result = await db.execute(stmt)
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    project.status = "deleted"
+    await db.commit()
+    return SuccessResponse(message="Project deleted")
