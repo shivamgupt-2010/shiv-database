@@ -5,10 +5,11 @@ from app.api.dependencies import get_database_service
 
 router = APIRouter(prefix="/health", tags=["System"])
 
+@router.get("")
 @router.get("/")
 async def health_check() -> Dict[str, str]:
     """Basic service health check."""
-    return {"status": "ok", "service": "SHIV Database & Auth V1"}
+    return {"status": "ok", "service": "SHIV Identity & Unified Auth"}
 
 @router.get("/db")
 async def db_health_check(db_service: DatabaseService = Depends(get_database_service)) -> Dict[str, Any]:
