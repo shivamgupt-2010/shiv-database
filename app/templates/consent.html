@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authorize {{ client_name }} — SHIV Identity</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .consent-card {
+            max-width: 480px;
+            width: 100%;
+            margin: 40px auto;
+            padding: 30px;
+        }
+        .app-badge {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .app-logo {
+            width: 54px;
+            height: 54px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            color: #fff;
+            overflow: hidden;
+        }
+        .scope-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 12px;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .scope-icon {
+            font-size: 1.1rem;
+            margin-top: 2px;
+        }
+        .scope-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #f1f5f9;
+        }
+        .scope-desc {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+        .actions-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+    </style>
+</head>
+<body style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;">
+    <div class="glass-card consent-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <div style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; color: var(--primary);">SHIV IDENTITY</div>
+            <div style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 2px 8px; border-radius: 999px; font-weight: 600;">Verified Provider</div>
+        </div>
+
+        <div class="app-badge">
+            <div class="app-logo">
+                {% if logo_uri %}
+                <img src="{{ logo_uri }}" alt="{{ client_name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                ⚡
+                {% endif %}
+            </div>
+            <div>
+                <h2 style="font-size: 1.25rem; font-weight: 700; color: #f8fafc; margin-bottom: 4px;">{{ client_name }}</h2>
+                <div style="font-size: 0.8rem; color: #94a3b8;">
+                    wants access to your <strong>SHIV Account</strong>
+                </div>
+            </div>
+        </div>
+
+        <div style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 16px;">
+            Signed in as <strong>{{ user_display_name }}</strong> (<code>{{ user_shiv_id }}</code>)
+        </div>
+
+        <div style="margin-bottom: 18px;">
+            <div style="font-size: 0.8rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px;">Requested Permissions:</div>
+            
+            {% for scope in scopes_list %}
+            <div class="scope-item">
+                <span class="scope-icon">{{ scope.icon }}</span>
+                <div>
+                    <div class="scope-title">{{ scope.title }}</div>
+                    <div class="scope-desc">{{ scope.description }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="font-size: 0.75rem; color: #64748b; margin-top: 10px; line-height: 1.4;">
+            By clicking <strong>Authorize</strong>, you allow {{ client_name }} to use your identity claims according to their terms and privacy policy. You can revoke access at any time from your SHIV Dashboard.
+        </div>
+
+        <form method="POST" action="/oauth/authorize/consent">
+            <input type="hidden" name="client_id" value="{{ client_id }}">
+            <input type="hidden" name="redirect_uri" value="{{ redirect_uri }}">
+            <input type="hidden" name="scope" value="{{ scope }}">
+            <input type="hidden" name="state" value="{{ state }}">
+            <input type="hidden" name="code_challenge" value="{{ code_challenge }}">
+            <input type="hidden" name="code_challenge_method" value="{{ code_challenge_method }}">
+            <input type="hidden" name="nonce" value="{{ nonce }}">
+            <input type="hidden" name="consent_token" value="{{ consent_token }}">
+
+            <div class="actions-row">
+                <button type="submit" name="action" value="deny" class="btn secondary-btn" style="flex: 1;">Cancel</button>
+                <button type="submit" name="action" value="approve" class="btn primary-btn" style="flex: 2;">Authorize</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
