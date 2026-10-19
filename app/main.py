@@ -124,23 +124,31 @@ async def startup_event():
         import app.database.models.oauth
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-            # Safe schema migrations for new SHIV Identity columns
-            for col_ddl in [
-                "ALTER TABLE users ADD COLUMN shiv_id VARCHAR(20)",
-                "ALTER TABLE users ADD COLUMN normalized_username VARCHAR(100)",
-                "ALTER TABLE users ADD COLUMN display_name VARCHAR(255)",
-                "ALTER TABLE users ADD COLUMN bio TEXT",
-                "ALTER TABLE users ADD COLUMN website VARCHAR(255)",
-                "ALTER TABLE users ADD COLUMN phone VARCHAR(50)",
-                "ALTER TABLE users ADD COLUMN phone_verified BOOLEAN DEFAULT FALSE",
-                "ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT FALSE",
-                "ALTER TABLE users ADD COLUMN mfa_secret VARCHAR(128)",
-                "ALTER TABLE sessions ADD COLUMN refresh_token_hash VARCHAR(255)",
-            ]:
-                try:
-                    await conn.execute(text(col_ddl))
-                except Exception:
-                    pass
+
+        # Safe schema migrations for new SHIV Identity columns (isolated transactions)
+        is_postgres = "postgresql" in str(engine.url)
+        ddl_statements = [
+            ("users", "shiv_id", "VARCHAR(20)"),
+            ("users", "normalized_username", "VARCHAR(100)"),
+            ("users", "display_name", "VARCHAR(255)"),
+            ("users", "bio", "TEXT"),
+            ("users", "website", "VARCHAR(255)"),
+            ("users", "phone", "VARCHAR(50)"),
+            ("users", "phone_verified", "BOOLEAN DEFAULT FALSE"),
+            ("users", "mfa_enabled", "BOOLEAN DEFAULT FALSE"),
+            ("users", "mfa_secret", "VARCHAR(128)"),
+            ("sessions", "refresh_token_hash", "VARCHAR(255)"),
+        ]
+
+        for table, col_name, col_type in ddl_statements:
+            try:
+                async with engine.begin() as ddl_conn:
+                    if is_postgres:
+                        await ddl_conn.execute(text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col_name} {col_type}"))
+                    else:
+                        await ddl_conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type}"))
+            except Exception:
+                pass
 
         # Seed or promote admin@shiv.com to super_admin with SHIV ID
         from app.database.session import AsyncSessionLocal
