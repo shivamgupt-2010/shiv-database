@@ -55,3 +55,25 @@ async def get_valid_session_by_token_hash(db: AsyncSession, token_hash: str) -> 
         raise AuthenticationError("Session has expired")
         
     return session
+
+async def list_user_sessions(db: AsyncSession, user_id: str) -> list[SessionModel]:
+    """List all active (non-revoked) sessions for a user."""
+    stmt = (
+        select(SessionModel)
+        .where(SessionModel.user_id == user_id, SessionModel.revoked == False)
+        .order_by(SessionModel.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+async def revoke_other_sessions(db: AsyncSession, user_id: str, current_session_id: str) -> int:
+    """Revoke all active sessions for a user except the specified one."""
+    stmt = (
+        update(SessionModel)
+        .where(SessionModel.user_id == user_id, SessionModel.id != current_session_id)
+        .values(revoked=True)
+    )
+    result = await db.execute(stmt)
+    await db.commit()
+    return result.rowcount
+
