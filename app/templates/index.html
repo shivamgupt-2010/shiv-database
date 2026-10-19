@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SHIV DB & Auth Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=20261019_v3">
 </head>
 <body>
     <div id="app">
@@ -68,10 +68,10 @@
                     <span class="badge badge-purple" style="font-size: 0.7rem;">Identity & DB</span>
                 </div>
                 <div class="nav-tabs">
-                    <button class="nav-tab-btn active" data-tab="tab-projects">Platform Overview</button>
-                    <button class="nav-tab-btn" data-tab="tab-identity">SHIV Identity</button>
-                    <button class="nav-tab-btn" data-tab="tab-apps">Developer Apps</button>
-                    <button class="nav-tab-btn" data-tab="tab-sessions">Connected Apps & Sessions</button>
+                    <button class="nav-tab-btn active" data-tab="tab-projects" onclick="window.switchDashboardTab && window.switchDashboardTab('tab-projects')">Platform Overview</button>
+                    <button class="nav-tab-btn" data-tab="tab-identity" onclick="window.switchDashboardTab && window.switchDashboardTab('tab-identity')">SHIV Identity</button>
+                    <button class="nav-tab-btn" data-tab="tab-apps" onclick="window.switchDashboardTab && window.switchDashboardTab('tab-apps')">Developer Apps</button>
+                    <button class="nav-tab-btn" data-tab="tab-sessions" onclick="window.switchDashboardTab && window.switchDashboardTab('tab-sessions')">Connected Apps & Sessions</button>
                 </div>
                 <div class="nav-actions" style="display: flex; align-items: center; gap: 15px;">
                     <span id="user-info-badge" style="font-size: 0.85rem; color: #a1a1aa; font-weight: 500;"></span>
@@ -236,7 +236,7 @@
                             <h2>OAuth 2.0 & OpenID Connect Applications</h2>
                             <p class="subtitle">Register web, mobile, and backend apps to integrate "Continue with SHIV" Single Sign-On.</p>
                         </div>
-                        <button class="btn primary-btn" id="open-register-app-btn" style="width: auto; padding: 10px 20px;">+ Register Application</button>
+                        <button class="btn primary-btn" id="open-register-app-btn" onclick="window.openRegisterAppModal && window.openRegisterAppModal()" style="width: auto; padding: 10px 20px;">+ Register Application</button>
                     </header>
 
                     <!-- Client Secret Banner (shown upon registration or rotation) -->
@@ -392,7 +392,7 @@
                         </div>
                     </div>
                     <div class="modal-actions">
-                        <button type="button" class="btn ghost-btn" id="close-app-modal">Cancel</button>
+                        <button type="button" class="btn ghost-btn" id="close-app-modal" onclick="window.closeRegisterAppModal && window.closeRegisterAppModal()">Cancel</button>
                         <button type="submit" class="btn primary-btn" style="width: auto;">Register Application</button>
                     </div>
                 </form>
@@ -402,6 +402,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=20261019_v3"></script>
 </body>
 </html>
