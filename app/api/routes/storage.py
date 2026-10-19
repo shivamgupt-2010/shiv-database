@@ -54,9 +54,14 @@ async def resolve_project_context(
                 raise HTTPException(status_code=401, detail="Invalid token payload")
 
             if project_id:
-                stmt = select(Project).where((Project.id == project_id) | (Project.name == project_id))
+                stmt = select(Project).where(
+                    ((Project.id == project_id) | (Project.name == project_id)) & (Project.owner_id == user_id)
+                )
             else:
-                stmt = select(Project).where(Project.status == "active").order_by(Project.created_at.desc())
+                stmt = select(Project).where(
+                    Project.status == "active",
+                    Project.owner_id == user_id
+                ).order_by(Project.created_at.desc())
 
             res = await db.execute(stmt)
             project = res.scalar_one_or_none()
