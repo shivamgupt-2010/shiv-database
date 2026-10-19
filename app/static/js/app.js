@@ -584,25 +584,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
 
     // Tab Switching
-    const navTabBtns = document.querySelectorAll('.nav-tab-btn');
-    const tabPanes = document.querySelectorAll('.tab-pane');
+    function switchDashboardTab(targetTab) {
+        const navTabBtns = document.querySelectorAll('.nav-tab-btn');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        navTabBtns.forEach(b => {
+            if (b.dataset.tab === targetTab) {
+                b.classList.add('active');
+            } else {
+                b.classList.remove('active');
+            }
+        });
+        tabPanes.forEach(p => p.classList.add('hidden'));
 
+        const targetPane = document.getElementById(targetTab);
+        if (targetPane) targetPane.classList.remove('hidden');
+
+        if (targetTab === 'tab-identity' && typeof fetchUserProfile === 'function') fetchUserProfile();
+        if (targetTab === 'tab-apps' && typeof fetchDeveloperApps === 'function') fetchDeveloperApps();
+        if (targetTab === 'tab-sessions') {
+            if (typeof fetchConnectedApps === 'function') fetchConnectedApps();
+            if (typeof fetchActiveSessions === 'function') fetchActiveSessions();
+        }
+    }
+    window.switchDashboardTab = switchDashboardTab;
+
+    const navTabBtns = document.querySelectorAll('.nav-tab-btn');
     navTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            const targetTab = btn.dataset.tab;
-            navTabBtns.forEach(b => b.classList.remove('active'));
-            tabPanes.forEach(p => p.classList.add('hidden'));
-
-            btn.classList.add('active');
-            const targetPane = document.getElementById(targetTab);
-            if (targetPane) targetPane.classList.remove('hidden');
-
-            if (targetTab === 'tab-identity') fetchUserProfile();
-            if (targetTab === 'tab-apps') fetchDeveloperApps();
-            if (targetTab === 'tab-sessions') {
-                fetchConnectedApps();
-                fetchActiveSessions();
-            }
+            switchDashboardTab(btn.dataset.tab);
         });
     });
 
@@ -695,11 +704,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const bannerSecretValue = document.getElementById('banner-secret-value');
     const copyBannerSecretBtn = document.getElementById('copy-banner-secret-btn');
 
+    function openRegisterAppModal() {
+        if (registerAppModal) registerAppModal.classList.remove('hidden');
+    }
+    function closeRegisterAppModal() {
+        if (registerAppModal) registerAppModal.classList.add('hidden');
+    }
+    window.openRegisterAppModal = openRegisterAppModal;
+    window.closeRegisterAppModal = closeRegisterAppModal;
+
     if (openRegisterAppBtn) {
-        openRegisterAppBtn.addEventListener('click', () => registerAppModal.classList.remove('hidden'));
+        openRegisterAppBtn.addEventListener('click', openRegisterAppModal);
     }
     if (closeAppModal) {
-        closeAppModal.addEventListener('click', () => registerAppModal.classList.add('hidden'));
+        closeAppModal.addEventListener('click', closeRegisterAppModal);
     }
 
     if (copyBannerSecretBtn) {
