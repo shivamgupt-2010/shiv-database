@@ -9,16 +9,30 @@ from app.core.exceptions import AuthenticationError, PermissionDeniedError, Prov
 from app.security.security import SecurityHeadersMiddleware, MaxBodySizeMiddleware
 from app.security.rate_limit import default_rate_limiter
 
-from app.api.routes import health, auth, records, projects, api_keys, audit, admin, storage, realtime, dashboard
+from app.api.routes import (
+    health,
+    auth,
+    records,
+    projects,
+    api_keys,
+    audit,
+    admin,
+    storage,
+    realtime,
+    dashboard,
+    oidc,
+    oauth,
+    oauth_clients,
+)
 from fastapi.staticfiles import StaticFiles
 
 logger = logging.getLogger("shiv.main")
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="SHIV Database & Auth V1",
-        description="Centralized database and authentication infrastructure for the SHIV platform.",
-        version="1.0.0",
+        title="SHIV Identity & Unified Auth Platform",
+        description="Centralized OpenID Connect and OAuth 2.0 Identity Platform for SHIV products and external websites.",
+        version="2.0.0",
     )
 
     # Middleware
@@ -74,6 +88,9 @@ def create_app() -> FastAPI:
 
     # Routers
     app.include_router(health.router)
+    app.include_router(oidc.router)
+    app.include_router(oauth.router)
+    app.include_router(oauth_clients.router)
     app.include_router(auth.router)
     app.include_router(records.router)
     app.include_router(projects.router)
@@ -93,7 +110,7 @@ app = create_app()
 
 @app.on_event("startup")
 async def startup_event():
-    logger.info("Starting SHIV DB & Auth service...")
+    logger.info("Starting SHIV Identity & Auth service...")
     try:
         from app.database.session import engine
         from app.database.models.base import Base
@@ -104,13 +121,28 @@ async def startup_event():
         import app.database.models.audit
         import app.database.models.fabric
         import app.database.models.media
+        import app.database.models.oauth
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-            try:
-                await conn.execute(text("ALTER TABLE sessions ADD COLUMN refresh_token_hash VARCHAR(255)"))
-            except Exception:
-                pass
-        # Seed or promote admin@shiv.com to super_admin
+            # Safe schema migrations for new SHIV Identity columns
+            for col_ddl in [
+                "ALTER TABLE users ADD COLUMN shiv_id VARCHAR(20)",
+                "ALTER TABLE users ADD COLUMN normalized_username VARCHAR(100)",
+                "ALTER TABLE users ADD COLUMN display_name VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN bio TEXT",
+                "ALTER TABLE users ADD COLUMN website VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN phone VARCHAR(50)",
+                "ALTER TABLE users ADD COLUMN phone_verified BOOLEAN DEFAULT FALSE",
+                "ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT FALSE",
+                "ALTER TABLE users ADD COLUMN mfa_secret VARCHAR(128)",
+                "ALTER TABLE sessions ADD COLUMN refresh_token_hash VARCHAR(255)",
+            ]:
+                try:
+                    await conn.execute(text(col_ddl))
+                except Exception:
+                    pass
+
+        # Seed or promote admin@shiv.com to super_admin with SHIV ID
         from app.database.session import AsyncSessionLocal
         from app.database.models.auth import User
         from app.auth.password import get_password_hash
@@ -123,14 +155,22 @@ async def startup_event():
             if admin_user:
                 admin_user.email = "admin@shiv.com"
                 admin_user.username = "admin"
+                admin_user.normalized_username = "admin"
+                if not admin_user.shiv_id:
+                    admin_user.shiv_id = "SHV-10001"
+                if not admin_user.display_name:
+                    admin_user.display_name = "SHIV Administrator"
                 admin_user.role = "super_admin"
                 admin_user.status = "active"
                 admin_user.hashed_password = get_password_hash("shivadmin")
                 await session.commit()
             else:
                 new_admin = User(
+                    shiv_id="SHV-10001",
                     email="admin@shiv.com",
                     username="admin",
+                    normalized_username="admin",
+                    display_name="SHIV Administrator",
                     role="super_admin",
                     status="active",
                     hashed_password=get_password_hash("shivadmin")
@@ -138,7 +178,7 @@ async def startup_event():
                 session.add(new_admin)
                 await session.commit()
 
-        logger.info("Database schema and admin@shiv.com verified and initialized.")
+        logger.info("Database schema, SHIV Identity models, and admin@shiv.com verified.")
     except Exception as e:
         logger.error(f"Non-fatal warning during startup schema initialization: {e}", exc_info=True)
 
