@@ -62,6 +62,8 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.02em; }
     position: sticky;
     top: 0;
     z-index: 50;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 /* Views */
@@ -286,7 +288,9 @@ input:focus {
 .nav-tabs {
     display: flex;
     gap: 8px;
-    margin: 0 1.5rem;
+    margin: 0 1rem;
+    flex-wrap: wrap;
+    align-items: center;
 }
 .nav-tab-btn {
     background: transparent;
@@ -358,4 +362,22 @@ textarea:focus, select:focus {
 select option {
     background: #0b0f19;
     color: #fff;
+}
+
+@media (max-width: 900px) {
+    .glass-nav {
+        padding: 0.75rem 1rem;
+    }
+    .nav-tabs {
+        order: 3;
+        width: 100%;
+        margin: 0.5rem 0 0 0;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .nav-tab-btn {
+        flex-shrink: 0;
+    }
 }
