@@ -19,21 +19,39 @@ class UserLoginRequest(BaseModel):
 
 class UserProfileResponse(BaseModel):
     id: str
+    shiv_id: Optional[str] = None
     email: str
     username: str
+    normalized_username: Optional[str] = None
     display_name: Optional[str] = None
+    bio: Optional[str] = None
+    website: Optional[str] = None
+    phone: Optional[str] = None
+    phone_verified: Optional[bool] = False
     avatar_url: Optional[str] = None
-    email_verified: bool
+    email_verified: bool = False
     role: str
     status: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 
 class UserProfileUpdateRequest(BaseModel):
     display_name: Optional[str] = None
     username: Optional[str] = Field(default=None, min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
     avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    website: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class SessionResponse(BaseModel):
+    id: str
+    device_info: Optional[str] = None
+    ip_address: Optional[str] = None
+    expires_at: datetime
+    created_at: datetime
+    is_current: bool = False
 
 
 class TokenResponse(BaseModel):
