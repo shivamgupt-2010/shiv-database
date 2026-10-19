@@ -19,8 +19,10 @@ async def list_api_keys(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Verify project exists by id or by name
-    stmt = select(Project).where((Project.id == project_id) | (Project.name == project_id))
+    # Verify project exists by id or by name AND belongs to current_user
+    stmt = select(Project).where(
+        ((Project.id == project_id) | (Project.name == project_id)) & (Project.owner_id == current_user.id)
+    )
     result = await db.execute(stmt)
     proj = result.scalar_one_or_none()
     if not proj:
@@ -62,8 +64,10 @@ async def create_api_key(
     if not name:
         name = "Production Key"
 
-    # Verify project exists by id or by name
-    stmt = select(Project).where((Project.id == project_id) | (Project.name == project_id))
+    # Verify project exists by id or by name AND belongs to current_user
+    stmt = select(Project).where(
+        ((Project.id == project_id) | (Project.name == project_id)) & (Project.owner_id == current_user.id)
+    )
     result = await db.execute(stmt)
     proj = result.scalar_one_or_none()
     if not proj:
@@ -96,11 +100,16 @@ async def revoke_api_key(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    stmt = update(APIKey).where(APIKey.id == key_id).values(revoked=True)
+    stmt = (
+        select(APIKey)
+        .join(Project, APIKey.project_id == Project.id)
+        .where(APIKey.id == key_id, Project.owner_id == current_user.id)
+    )
     result = await db.execute(stmt)
-    await db.commit()
-    
-    if result.rowcount == 0:
+    api_key = result.scalar_one_or_none()
+    if not api_key:
         raise HTTPException(status_code=404, detail="API Key not found")
         
+    api_key.revoked = True
+    await db.commit()
     return SuccessResponse(message="API Key revoked")
