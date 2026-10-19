@@ -15,6 +15,7 @@ class Project(Base):
     enabled_providers: Mapped[str] = mapped_column(String(255), default="shiv_native", nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="active", nullable=False)
     config: Mapped[Optional[str]] = mapped_column(Text, default="{}", nullable=True)
+    owner_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True)
 
     api_keys: Mapped[list["APIKey"]] = relationship("APIKey", back_populates="project", cascade="all, delete-orphan")
 
