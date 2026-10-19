@@ -138,6 +138,7 @@ async def startup_event():
             ("users", "mfa_enabled", "BOOLEAN DEFAULT FALSE"),
             ("users", "mfa_secret", "VARCHAR(128)"),
             ("sessions", "refresh_token_hash", "VARCHAR(255)"),
+            ("projects", "owner_id", "VARCHAR(36)"),
         ]
 
         for table, col_name, col_type in ddl_statements:
@@ -154,7 +155,7 @@ async def startup_event():
         from app.database.session import AsyncSessionLocal
         from app.database.models.auth import User
         from app.auth.password import get_password_hash
-        from sqlalchemy import select
+        from sqlalchemy import select, update
 
         async with AsyncSessionLocal() as session:
             stmt = select(User).where((User.email == "admin@shiv.com") | (User.username == "admin"))
@@ -172,6 +173,7 @@ async def startup_event():
                 admin_user.status = "active"
                 admin_user.hashed_password = get_password_hash("shivadmin")
                 await session.commit()
+                admin_id = admin_user.id
             else:
                 new_admin = User(
                     shiv_id="SHV-10001",
@@ -185,6 +187,18 @@ async def startup_event():
                 )
                 session.add(new_admin)
                 await session.commit()
+                admin_id = new_admin.id
+
+            # Backfill legacy projects without owner_id to admin user
+            if admin_id:
+                try:
+                    from app.database.models.project import Project
+                    await session.execute(
+                        update(Project).where(Project.owner_id.is_(None)).values(owner_id=admin_id)
+                    )
+                    await session.commit()
+                except Exception as ex:
+                    logger.warning(f"Could not backfill projects owner_id: {ex}")
 
         logger.info("Database schema, SHIV Identity models, and admin@shiv.com verified.")
     except Exception as e:
