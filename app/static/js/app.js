@@ -579,5 +579,417 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ==========================================
+    // --- SHIV IDENTITY & TABS MANAGEMENT ---
+    // ==========================================
+
+    // Tab Switching
+    const navTabBtns = document.querySelectorAll('.nav-tab-btn');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+
+    navTabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.dataset.tab;
+            navTabBtns.forEach(b => b.classList.remove('active'));
+            tabPanes.forEach(p => p.classList.add('hidden'));
+
+            btn.classList.add('active');
+            const targetPane = document.getElementById(targetTab);
+            if (targetPane) targetPane.classList.remove('hidden');
+
+            if (targetTab === 'tab-identity') fetchUserProfile();
+            if (targetTab === 'tab-apps') fetchDeveloperApps();
+            if (targetTab === 'tab-sessions') {
+                fetchConnectedApps();
+                fetchActiveSessions();
+            }
+        });
+    });
+
+    // --- Profile Management ---
+    const profileForm = document.getElementById('edit-profile-form');
+    const profileFeedback = document.getElementById('profile-feedback');
+
+    async function fetchUserProfile() {
+        try {
+            const res = await apiRequest('/auth/me');
+            if (res && res.data) {
+                const u = res.data;
+                const shivId = u.shiv_id || 'SHV-USER';
+                const dName = u.display_name || u.username;
+                const uname = u.username;
+
+                document.getElementById('profile-shiv-id-badge').textContent = shivId;
+                document.getElementById('profile-avatar-circle').textContent = dName.charAt(0).toUpperCase();
+                document.getElementById('profile-display-name-text').textContent = dName;
+                document.getElementById('profile-username-text').textContent = `@${uname}`;
+                document.getElementById('profile-email-text').textContent = u.email;
+
+                const vBadge = document.getElementById('profile-email-verified-badge');
+                if (u.email_verified) {
+                    vBadge.textContent = 'Verified';
+                    vBadge.className = 'badge badge-success';
+                } else {
+                    vBadge.textContent = 'Unverified';
+                    vBadge.className = 'badge badge-warning';
+                }
+
+                document.getElementById('profile-role-badge').textContent = u.role || 'user';
+                document.getElementById('profile-status-badge').textContent = u.status || 'active';
+
+                // Pre-fill inputs
+                document.getElementById('edit-display-name').value = u.display_name || '';
+                document.getElementById('edit-bio').value = u.bio || '';
+                document.getElementById('edit-website').value = u.website || '';
+                document.getElementById('edit-phone').value = u.phone || '';
+            }
+        } catch (err) {
+            console.error('Failed to fetch profile:', err);
+        }
+    }
+
+    if (profileForm) {
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const saveBtn = document.getElementById('save-profile-btn');
+            saveBtn.classList.add('loading');
+            profileFeedback.classList.add('hidden');
+
+            const payload = {
+                display_name: document.getElementById('edit-display-name').value.trim() || null,
+                bio: document.getElementById('edit-bio').value.trim() || null,
+                website: document.getElementById('edit-website').value.trim() || null,
+                phone: document.getElementById('edit-phone').value.trim() || null,
+            };
+
+            try {
+                const res = await apiRequest('/auth/me', {
+                    method: 'PATCH',
+                    body: JSON.stringify(payload)
+                });
+                profileFeedback.textContent = 'Profile successfully updated!';
+                profileFeedback.style.background = 'rgba(16, 185, 129, 0.15)';
+                profileFeedback.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+                profileFeedback.style.color = '#34d399';
+                profileFeedback.classList.remove('hidden');
+                await fetchUserProfile();
+            } catch (err) {
+                profileFeedback.textContent = 'Update failed: ' + err.message;
+                profileFeedback.style.background = 'rgba(239, 68, 68, 0.15)';
+                profileFeedback.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                profileFeedback.style.color = '#f87171';
+                profileFeedback.classList.remove('hidden');
+            } finally {
+                saveBtn.classList.remove('loading');
+            }
+        });
+    }
+
+    // --- Developer Applications (OAuth / OIDC) ---
+    const registerAppModal = document.getElementById('register-app-modal');
+    const openRegisterAppBtn = document.getElementById('open-register-app-btn');
+    const closeAppModal = document.getElementById('close-app-modal');
+    const createAppForm = document.getElementById('create-app-form');
+    const developerAppsList = document.getElementById('developer-apps-list');
+    const clientSecretBanner = document.getElementById('client-secret-banner');
+    const bannerSecretValue = document.getElementById('banner-secret-value');
+    const copyBannerSecretBtn = document.getElementById('copy-banner-secret-btn');
+
+    if (openRegisterAppBtn) {
+        openRegisterAppBtn.addEventListener('click', () => registerAppModal.classList.remove('hidden'));
+    }
+    if (closeAppModal) {
+        closeAppModal.addEventListener('click', () => registerAppModal.classList.add('hidden'));
+    }
+
+    if (copyBannerSecretBtn) {
+        copyBannerSecretBtn.addEventListener('click', async () => {
+            const secret = bannerSecretValue.value;
+            try {
+                await navigator.clipboard.writeText(secret);
+                copyBannerSecretBtn.textContent = 'Copied!';
+                setTimeout(() => copyBannerSecretBtn.textContent = 'Copy Secret', 2000);
+            } catch {
+                prompt('Copy secret:', secret);
+            }
+        });
+    }
+
+    if (createAppForm) {
+        createAppForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const client_name = document.getElementById('app-name').value.trim();
+            const client_type = document.getElementById('app-type').value;
+            const client_uri = document.getElementById('app-website').value.trim();
+            const rawUris = document.getElementById('app-redirect-uris').value.trim();
+            const redirect_uris = rawUris.split(/[\n,]+/).map(u => u.trim()).filter(Boolean);
+
+            const scopes = ['openid'];
+            if (document.getElementById('scope-profile').checked) scopes.push('profile');
+            if (document.getElementById('scope-email').checked) scopes.push('email');
+            if (document.getElementById('scope-offline').checked) scopes.push('offline_access');
+
+            try {
+                const res = await apiRequest('/oauth/clients', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        client_name,
+                        client_type,
+                        client_uri,
+                        redirect_uris,
+                        allowed_scopes: scopes.join(' ')
+                    })
+                });
+
+                registerAppModal.classList.add('hidden');
+                createAppForm.reset();
+
+                if (res.data && res.data.client_secret) {
+                    bannerSecretValue.value = res.data.client_secret;
+                    clientSecretBanner.classList.remove('hidden');
+                    clientSecretBanner.scrollIntoView({ behavior: 'smooth' });
+                }
+
+                await fetchDeveloperApps();
+            } catch (err) {
+                alert('App Registration Failed: ' + err.message);
+            }
+        });
+    }
+
+    async function fetchDeveloperApps() {
+        if (!developerAppsList) return;
+        developerAppsList.innerHTML = '<li style="color: #71717a;">Loading applications...</li>';
+
+        try {
+            const res = await apiRequest('/oauth/clients');
+            const apps = res.data || [];
+
+            if (apps.length === 0) {
+                developerAppsList.innerHTML = `
+                    <li style="padding: 24px; text-align: center; color: #a1a1aa;">
+                        No OAuth applications registered yet. Click <strong>+ Register Application</strong> to integrate your first service.
+                    </li>
+                `;
+                return;
+            }
+
+            developerAppsList.innerHTML = '';
+            apps.forEach(app => {
+                const li = document.createElement('li');
+                li.style.flexDirection = 'column';
+                li.style.alignItems = 'flex-start';
+                li.style.gap = '12px';
+                li.style.padding = '16px';
+                li.style.cursor = 'default';
+
+                const urisHtml = (app.redirect_uris || []).map(u => `<code style="font-size: 0.75rem; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: #93c5fd;">${u}</code>`).join(' ');
+
+                li.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div>
+                            <strong style="font-size: 1.05rem; color: #fff;">${app.client_name}</strong>
+                            <span class="badge ${app.client_type === 'confidential' ? 'badge-primary' : 'badge-purple'}" style="margin-left: 8px;">${app.client_type}</span>
+                            <span class="badge badge-success" style="margin-left: 4px;">${app.status || 'active'}</span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            ${app.client_type === 'confidential' ? `<button type="button" class="btn ghost-btn rotate-secret-btn" data-id="${app.id}" data-name="${app.client_name}" style="padding: 4px 10px; font-size: 0.75rem; border: 1px solid rgba(245,158,11,0.4); color: #fbbf24;">Rotate Secret</button>` : ''}
+                            <button type="button" class="btn ghost-btn delete-app-btn" data-id="${app.id}" data-name="${app.client_name}" style="padding: 4px 10px; font-size: 0.75rem; border: 1px solid rgba(239,68,68,0.4); color: #ef4444;">Delete</button>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #a1a1aa; width: 100%; display: flex; flex-direction: column; gap: 6px;">
+                        <div>
+                            <strong>Client ID:</strong> 
+                            <code style="color: #60a5fa; user-select: all; font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">${app.client_id}</code>
+                            <button type="button" class="btn ghost-btn copy-client-id-btn" data-id="${app.client_id}" style="padding: 2px 6px; font-size: 0.7rem; margin-left: 6px;">Copy</button>
+                        </div>
+                        <div>
+                            <strong>Allowed Scopes:</strong> 
+                            <span style="color: #e2e8f0; font-family: monospace; font-size: 0.8rem;">${app.allowed_scopes}</span>
+                        </div>
+                        <div>
+                            <strong>Redirect URIs:</strong>
+                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">${urisHtml}</div>
+                        </div>
+                    </div>
+                `;
+
+                // Copy Client ID
+                const copyIdBtn = li.querySelector('.copy-client-id-btn');
+                if (copyIdBtn) {
+                    copyIdBtn.addEventListener('click', async () => {
+                        await navigator.clipboard.writeText(app.client_id);
+                        copyIdBtn.textContent = 'Copied!';
+                        setTimeout(() => copyIdBtn.textContent = 'Copy', 1500);
+                    });
+                }
+
+                // Rotate Secret
+                const rotateBtn = li.querySelector('.rotate-secret-btn');
+                if (rotateBtn) {
+                    rotateBtn.addEventListener('click', async () => {
+                        if (confirm(`Rotate client secret for "${app.client_name}"? Existing client applications using the old secret will fail immediately until updated.`)) {
+                            try {
+                                const rotRes = await apiRequest(`/oauth/clients/${app.id}/rotate-secret`, { method: 'POST' });
+                                if (rotRes.data && rotRes.data.client_secret) {
+                                    bannerSecretValue.value = rotRes.data.client_secret;
+                                    clientSecretBanner.classList.remove('hidden');
+                                    clientSecretBanner.scrollIntoView({ behavior: 'smooth' });
+                                }
+                            } catch (err) {
+                                alert('Secret rotation failed: ' + err.message);
+                            }
+                        }
+                    });
+                }
+
+                // Delete App
+                const delBtn = li.querySelector('.delete-app-btn');
+                if (delBtn) {
+                    delBtn.addEventListener('click', async () => {
+                        if (confirm(`Permanently delete OAuth application "${app.client_name}"? All issued authorization codes and tokens will be invalidated.`)) {
+                            try {
+                                await apiRequest(`/oauth/clients/${app.id}`, { method: 'DELETE' });
+                                await fetchDeveloperApps();
+                            } catch (err) {
+                                alert('Delete failed: ' + err.message);
+                            }
+                        }
+                    });
+                }
+
+                developerAppsList.appendChild(li);
+            });
+        } catch (err) {
+            developerAppsList.innerHTML = `<li style="color: #ef4444;">Error loading applications: ${err.message}</li>`;
+        }
+    }
+
+    // --- Connected Applications (User Consents) ---
+    const connectedAppsList = document.getElementById('connected-apps-list');
+
+    async function fetchConnectedApps() {
+        if (!connectedAppsList) return;
+        connectedAppsList.innerHTML = '<li style="color: #71717a;">Loading connected applications...</li>';
+
+        try {
+            const res = await apiRequest('/oauth/grants');
+            const grants = res.data || [];
+
+            if (grants.length === 0) {
+                connectedAppsList.innerHTML = '<li style="padding: 20px; text-align: center; color: #a1a1aa;">No external applications have been granted access to your account.</li>';
+                return;
+            }
+
+            connectedAppsList.innerHTML = '';
+            grants.forEach(g => {
+                const li = document.createElement('li');
+                li.style.display = 'flex';
+                li.style.justifyContent = 'space-between';
+                li.style.alignItems = 'center';
+                li.style.padding = '12px 16px';
+                li.style.cursor = 'default';
+
+                li.innerHTML = `
+                    <div>
+                        <strong style="color: #fff;">${g.client_name || g.client_id}</strong>
+                        <div style="font-size: 0.75rem; color: #a1a1aa; margin-top: 2px;">
+                            Scopes: <span style="color: #60a5fa;">${g.granted_scopes}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn ghost-btn revoke-grant-btn" data-client-id="${g.client_id}" style="color: #ef4444; border: 1px solid rgba(239,68,68,0.3); font-size: 0.75rem; padding: 4px 10px;">Revoke Access</button>
+                `;
+
+                const revBtn = li.querySelector('.revoke-grant-btn');
+                revBtn.addEventListener('click', async () => {
+                    if (confirm(`Revoke access for "${g.client_name || g.client_id}"?`)) {
+                        try {
+                            await apiRequest(`/oauth/grants/${g.client_id}`, { method: 'DELETE' });
+                            await fetchConnectedApps();
+                        } catch (err) {
+                            alert('Failed to revoke access: ' + err.message);
+                        }
+                    }
+                });
+
+                connectedAppsList.appendChild(li);
+            });
+        } catch (err) {
+            connectedAppsList.innerHTML = `<li style="color: #ef4444;">Error: ${err.message}</li>`;
+        }
+    }
+
+    // --- Active Sessions ---
+    const activeSessionsList = document.getElementById('active-sessions-list');
+    const revokeAllSessionsBtn = document.getElementById('revoke-all-sessions-btn');
+
+    async function fetchActiveSessions() {
+        if (!activeSessionsList) return;
+        activeSessionsList.innerHTML = '<li style="color: #71717a;">Loading active sessions...</li>';
+
+        try {
+            const res = await apiRequest('/auth/sessions');
+            const sessions = res.data || [];
+
+            if (sessions.length === 0) {
+                activeSessionsList.innerHTML = '<li style="padding: 20px; text-align: center; color: #a1a1aa;">No active sessions found.</li>';
+                return;
+            }
+
+            activeSessionsList.innerHTML = '';
+            sessions.forEach(s => {
+                const li = document.createElement('li');
+                li.style.display = 'flex';
+                li.style.justifyContent = 'space-between';
+                li.style.alignItems = 'center';
+                li.style.padding = '12px 16px';
+                li.style.cursor = 'default';
+
+                const ip = s.ip_address || 'Unknown IP';
+                const ua = s.user_agent ? (s.user_agent.length > 40 ? s.user_agent.substring(0, 40) + '...' : s.user_agent) : 'Browser / Client';
+                const created = s.created_at ? new Date(s.created_at).toLocaleString() : 'Recent';
+
+                li.innerHTML = `
+                    <div>
+                        <strong style="color: #fff; font-size: 0.85rem;">${ua}</strong>
+                        <div style="font-size: 0.75rem; color: #a1a1aa; margin-top: 2px;">
+                            IP: ${ip} • Signed in: ${created}
+                        </div>
+                    </div>
+                    <button type="button" class="btn ghost-btn revoke-session-btn" data-session-id="${s.id}" style="color: #ef4444; border: 1px solid rgba(239,68,68,0.3); font-size: 0.75rem; padding: 4px 10px;">Terminate</button>
+                `;
+
+                const termBtn = li.querySelector('.revoke-session-btn');
+                termBtn.addEventListener('click', async () => {
+                    if (confirm('Terminate this active session?')) {
+                        try {
+                            await apiRequest(`/auth/sessions/${s.id}`, { method: 'DELETE' });
+                            await fetchActiveSessions();
+                        } catch (err) {
+                            alert('Failed to terminate session: ' + err.message);
+                        }
+                    }
+                });
+
+                activeSessionsList.appendChild(li);
+            });
+        } catch (err) {
+            activeSessionsList.innerHTML = `<li style="color: #ef4444;">Error: ${err.message}</li>`;
+        }
+    }
+
+    if (revokeAllSessionsBtn) {
+        revokeAllSessionsBtn.addEventListener('click', async () => {
+            if (confirm('Terminate all other device sessions? You will remain logged in on this current browser.')) {
+                try {
+                    await apiRequest('/auth/sessions/revoke-all', { method: 'POST' });
+                    await fetchActiveSessions();
+                } catch (err) {
+                    alert('Failed to revoke sessions: ' + err.message);
+                }
+            }
+        });
+    }
+
 });
 
