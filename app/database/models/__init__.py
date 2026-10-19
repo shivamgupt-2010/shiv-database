@@ -14,6 +14,12 @@ from app.database.models.audit import AuditLog
 from app.database.models.record import GenericRecord
 from app.database.models.fabric import FabricIndex
 from app.database.models.media import MediaFile
+from app.database.models.oauth import (
+    OAuthClient,
+    OAuthAuthorizationCode,
+    OAuthConsentGrant,
+    OAuthToken,
+)
 
 __all__ = [
     "Base",
@@ -32,5 +38,9 @@ __all__ = [
     "GenericRecord",
     "FabricIndex",
     "MediaFile",
+    "OAuthClient",
+    "OAuthAuthorizationCode",
+    "OAuthConsentGrant",
+    "OAuthToken",
 ]
 
