@@ -102,7 +102,12 @@ def create_app() -> FastAPI:
     app.include_router(dashboard.router)
 
     # Static files for dashboard
-    app.mount("/static", StaticFiles(directory="app/static"), name="static")
+    import os
+    from pathlib import Path
+    app_dir = Path(__file__).resolve().parent
+    static_dir = app_dir / "static"
+    if static_dir.exists():
+        app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
     return app
 
