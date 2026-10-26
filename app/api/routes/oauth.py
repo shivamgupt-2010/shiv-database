@@ -27,13 +27,15 @@ from app.database.models.oauth import (
 from app.auth.keys import key_manager
 from app.auth.tokens import create_access_token, verify_access_token
 from app.auth.password import verify_password
+from pathlib import Path
 from app.api.dependencies import get_auth_service, get_current_user
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/oauth", tags=["OAuth 2.0 & OpenID Connect"])
 
-templates = Jinja2Templates(directory="app/templates")
+templates_dir = Path(__file__).resolve().parent.parent.parent / "templates"
+templates = Jinja2Templates(directory=str(templates_dir))
 
 SCOPE_METADATA = {
     "openid": {
