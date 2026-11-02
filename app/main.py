@@ -23,6 +23,7 @@ from app.api.routes import (
     oidc,
     oauth,
     oauth_clients,
+    automation,
 )
 from fastapi.staticfiles import StaticFiles
 
@@ -100,6 +101,7 @@ def create_app() -> FastAPI:
     app.include_router(storage.router)
     app.include_router(realtime.router)
     app.include_router(dashboard.router)
+    app.include_router(automation.router)
 
     # Static files for dashboard
     import os
