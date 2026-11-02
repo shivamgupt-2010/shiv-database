@@ -20,6 +20,17 @@ from app.database.models.oauth import (
     OAuthConsentGrant,
     OAuthToken,
 )
+from app.database.models.automation import (
+    ActionDefinition,
+    AutomationWorkflow,
+    AutomationTrigger,
+    TaskRun,
+    TaskStep,
+    ActionApproval,
+    ConnectedDevice,
+    AutomationEvent,
+    ActionAuditLog,
+)
 
 __all__ = [
     "Base",
@@ -42,5 +53,14 @@ __all__ = [
     "OAuthAuthorizationCode",
     "OAuthConsentGrant",
     "OAuthToken",
+    "ActionDefinition",
+    "AutomationWorkflow",
+    "AutomationTrigger",
+    "TaskRun",
+    "TaskStep",
+    "ActionApproval",
+    "ConnectedDevice",
+    "AutomationEvent",
+    "ActionAuditLog",
 ]
 
