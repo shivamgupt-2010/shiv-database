@@ -49,8 +49,11 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def rate_limit_middleware(request: Request, call_next):
-        # We manually call rate limiter since middleware doesn't easily support FastAPI Depends
-        # without complex workarounds, though using dependencies on routes is another option.
+        # Exclude health checks, documentation, and static files from rate limiting for 24/7 uptime
+        exempt_paths = ("/health", "/docs", "/openapi.json", "/favicon.ico", "/.well-known/openid-configuration", "/.well-known/jwks.json")
+        if request.url.path in exempt_paths or request.url.path.startswith("/static/"):
+            return await call_next(request)
+
         try:
             await default_rate_limiter(request)
         except Exception as e:
@@ -178,7 +181,8 @@ async def startup_event():
                     admin_user.display_name = "SHIV Administrator"
                 admin_user.role = "super_admin"
                 admin_user.status = "active"
-                admin_user.hashed_password = get_password_hash("shivadmin")
+                if not admin_user.hashed_password:
+                    admin_user.hashed_password = get_password_hash("shivadmin")
                 await session.commit()
                 admin_id = admin_user.id
             else:
