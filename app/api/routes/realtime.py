@@ -34,11 +34,17 @@ class ConnectionManager:
                 "record_id": record_id,
                 "data": data
             }
+            dead_connections = []
             for connection in self.active_connections[collection]:
                 try:
                     await connection.send_text(json.dumps(message))
                 except Exception as e:
-                    logger.error(f"Error sending ws message: {e}")
+                    logger.warning(f"Removing dead WebSocket client: {e}")
+                    dead_connections.append(connection)
+
+            for dead in dead_connections:
+                if dead in self.active_connections[collection]:
+                    self.active_connections[collection].remove(dead)
 
 manager = ConnectionManager()
 
